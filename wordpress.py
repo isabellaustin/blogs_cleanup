@@ -19,11 +19,22 @@ class wp:
         return f"<wp({self.url})>"
     
 
-    def get_users(self) -> List[str]:
-        response = requests.get(f"{self.api_url}users", headers = self.headers)
-        data = response.json()
-        print(data)
-        return [u['slug'] for u in data]
+    def get_users(self, user, mysql) -> List[str]:
+        # response = requests.get(f"{self.api_url}users", headers = self.headers)
+        # data = response.json()
+        # print(data)
+        # return [u['slug'] for u in data]
+    
+        cursor = mysql.cursor()
+            
+        query = ('''select id, user_login')
+                    from wp_users''')
+        cursor.execute(query)
+
+        for(id, user_login) in cursor:
+            user [id] = user_login
+
+        cursor.close()
     
 
     def get_sites(self) -> List[str]:
@@ -103,7 +114,7 @@ class wp:
         cursor = mysql.cursor()
         
         query = ('''select id, user_email 
-                    from wp_users 
+                    from wp_users
                     where user_email like "%@butler.edu"''')
         cursor.execute(query)
 
@@ -152,3 +163,14 @@ class wp:
             outside_users [id, user_registered] = user_login
 
         cursor.close()
+
+    # def get_outside_users(self,  slug: str = "/"): # -> dict[int,str]: 
+    #     colorama.init(autoreset=True)
+    #     site_url = f"{self.url}{slug}wp-json/wp/v2/users"
+    #     response = requests.get(site_url, headers = self.headers)
+    #     if response.status_code == 200:
+    #         data = response.json()
+    #         return [int(item["id"]) for item in data]
+    #     else:
+    #         print(f"{Fore.WHITE}{Back.BLACK}Status code error on {slug}{Back.RESET}")
+    #         return []
