@@ -4,6 +4,7 @@ import json
 import base64
 import colorama
 from colorama import Fore, Back
+import sys
 
 class wp:
     def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
@@ -64,8 +65,8 @@ class wp:
         self.token = base64.b64encode(credentials.encode()).decode('utf-8')
 
     
-    def compare_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
-        """Finds the difference between the list of users on blogs.butler.edu and all users 
+    def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
+        """Finds the difference between the list of current usersr and all active users (all_users.txt) on blogs.butler.edu
 
         Args:
             exclude (list[str], optional): _description_. Defaults to [].
@@ -73,13 +74,14 @@ class wp:
 
         Returns:
             List[str]: _description_
-        """        
+        """
+
         all_users = set(line.strip().lower() for line in open('all_users.txt')
                         if line.strip() not in exclude)
         # blogs_users = set(line.strip().lower() for line in open('blogs_users.txt')
         #                   if line.strip() not in exclude)
-        difference = set(blogs_users).difference(all_users)
-        intersect = all_users.intersection(set(blogs_users))
+        difference = set(blogs_users).difference(all_users) #the ones that aren't in both; returns users that are in blogs and not active
+        intersect = set(blogs_users).intersection(all_users) #the ones that are in both; returns active blogs users
         return difference
     
 
@@ -99,9 +101,10 @@ class wp:
             data = response.json()
             return [int(item["id"]) for item in data]
         else:
-            print(f"{Fore.WHITE}{Back.BLACK}Status code error on {slug}{Back.RESET}")
+            print(f"{Fore.WHITE}{Back.BLACK}Status code {response.status_code} on {slug}{Back.RESET}")
+            # sys.exit()
             return []
-    
+            
 
     def get_id_username(self, id_username, mysql): # -> dict[int,str]: 
         """Gets the id and username of blogs users with Butler emails.
@@ -114,8 +117,8 @@ class wp:
         cursor = mysql.cursor()
         
         query = ('''select id, user_email 
-                    from wp_users
-                    where user_email like "%@butler.edu"''')
+                    from wp_users''')
+                    # where user_email like "%@butler.edu"
         cursor.execute(query)
 
         for(id, user_email) in cursor:
@@ -154,23 +157,13 @@ class wp:
         """        
         cursor = mysql.cursor()
         
-        query = ('''select id, user_login, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
+        query = ('''select id, user_email, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
                     from wp_users 
                     where user_email not like "%@butler.edu"''')
         cursor.execute(query)
 
-        for(id, user_login, user_registered) in cursor:
-            outside_users [id, user_registered] = user_login
+        for(id, user_email, user_registered) in cursor:
+            outside_users [id, user_registered] = user_email
 
         cursor.close()
 
-    # def get_outside_users(self,  slug: str = "/"): # -> dict[int,str]: 
-    #     colorama.init(autoreset=True)
-    #     site_url = f"{self.url}{slug}wp-json/wp/v2/users"
-    #     response = requests.get(site_url, headers = self.headers)
-    #     if response.status_code == 200:
-    #         data = response.json()
-    #         return [int(item["id"]) for item in data]
-    #     else:
-    #         print(f"{Fore.WHITE}{Back.BLACK}Status code error on {slug}{Back.RESET}")
-    #         return []
