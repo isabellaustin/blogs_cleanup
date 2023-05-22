@@ -1,0 +1,154 @@
+from typing import List
+import requests
+import json
+import base64
+import colorama
+from colorama import Fore, Back
+
+class wp:
+    def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
+        self.url = url
+        self.api_url = f"{self.url}/wp-json/wp/v2/"
+        self.username = username
+        self.password = password
+        self.make_cred()
+        self.headers = {'Authorization': f'Basic {self.token}'}
+
+
+    def __str__(self) -> str:
+        return f"<wp({self.url})>"
+    
+
+    def get_users(self) -> List[str]:
+        response = requests.get(f"{self.api_url}users", headers = self.headers)
+        data = response.json()
+        print(data)
+        return [u['slug'] for u in data]
+    
+
+    def get_sites(self) -> List[str]:
+        return []
+    
+
+    def get_site_users(self, site: int = 1) -> List[str]:
+        return []
+    
+
+    def delete_user(self) -> List[str]:
+        return []
+    
+    def get_posts(self) -> List[str]:       
+        response = requests.get(f"{self.api_url}posts")
+        if response.status_code != 200:
+            return []
+        # results = []
+        # for post in response.json():
+        #     results.append(post["title"]["rendered"])
+        # return results
+        return [post["title"]["rendered"] for post in response.json()]
+    
+
+    def make_cred(self) -> None:
+        credentials = self.username + ":" + self.password
+        self.token = base64.b64encode(credentials.encode()).decode('utf-8')
+
+    
+    def compare_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
+        """Finds the difference between the list of users on blogs.butler.edu and all users 
+
+        Args:
+            exclude (list[str], optional): _description_. Defaults to [].
+            blogs_users (list[str], optional): _description_. Defaults to [].
+
+        Returns:
+            List[str]: _description_
+        """        
+        all_users = set(line.strip().lower() for line in open('all_users.txt')
+                        if line.strip() not in exclude)
+        # blogs_users = set(line.strip().lower() for line in open('blogs_users.txt')
+        #                   if line.strip() not in exclude)
+        difference = set(blogs_users).difference(all_users)
+        intersect = all_users.intersection(set(blogs_users))
+        return difference
+    
+
+    def get_site_users(self, slug: str = "/") -> List[str]:
+        """Gets the users for a specific site.
+
+        Args:
+            slug (str, optional): _description_. Defaults to "/".
+
+        Returns:
+            List[str]: _description_
+        """       
+        colorama.init(autoreset=True)
+        site_url = f"{self.url}{slug}wp-json/wp/v2/users"
+        response = requests.get(site_url, headers = self.headers)
+        if response.status_code == 200:
+            data = response.json()
+            return [int(item["id"]) for item in data]
+        else:
+            print(f"{Fore.WHITE}{Back.BLACK}Status code error on {slug}{Back.RESET}")
+            return []
+    
+
+    def get_id_username(self, id_username, mysql): # -> dict[int,str]: 
+        """Gets the id and username of blogs users with Butler emails.
+
+        Args:
+            id_username (_type_): _description_
+            mysql (_type_): _description_
+        """        
+        # cnx = mysql.connector.connect(user="wordpress", password="4AbyJVrcPTH6aHgfAqt3", host="mysql-1.butler.edu", database="wp_blogs_dev")
+        cursor = mysql.cursor()
+        
+        query = ('''select id, user_email 
+                    from wp_users 
+                    where user_email like "%@butler.edu"''')
+        cursor.execute(query)
+
+        for(id, user_email) in cursor:
+            id_username [id] = user_email.split('@')[0]
+
+        cursor.close()
+        # cnx.close()
+
+    
+    def get_user_blogs(self, user_blogs, mysql): # -> dict[int,str]: 
+        """Gets all the blog ids and blog paths associated with one blogs users (get_site_users).
+
+        Args:
+            user_blogs (_type_): _description_
+            mysql (_type_): _description_
+        """        
+        cursor = mysql.cursor()
+        
+        #need to find all the blog paths associated with one user_id/email
+        query = ('''select blog_id, path 
+                    from wp_blogs''')
+        cursor.execute(query)
+
+        for(blog_id, path) in cursor:
+            user_blogs [blog_id] = path
+        
+        cursor.close()
+
+
+    def get_outside_users(self, outside_users, mysql): # -> dict[int,str]: 
+        """Gets the id, username, and registration date of blogs users with non-Butler emails.
+
+        Args:
+            outside_users (_type_): _description_
+            mysql (_type_): _description_
+        """        
+        cursor = mysql.cursor()
+        
+        query = ('''select id, user_login, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
+                    from wp_users 
+                    where user_email not like "%@butler.edu"''')
+        cursor.execute(query)
+
+        for(id, user_login, user_registered) in cursor:
+            outside_users [id, user_registered] = user_login
+
+        cursor.close()
