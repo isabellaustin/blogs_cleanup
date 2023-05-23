@@ -38,7 +38,7 @@ class wp:
         cursor.close()
     
 
-    def delete_user(self, userID, userLogin, mysql) -> None: 
+    def delete_user(self, userID, userLogin, mysql) -> None:
         cursor = mysql.cursor()
         
         query = (f'''delete from wp_users where ID = {userID} and user_login = {userLogin}''')
@@ -47,7 +47,7 @@ class wp:
         cursor.close()
 
 
-    def delete_blog(self, blogID, blogPath, mysql) -> None:   
+    def delete_blog(self, blogID, blogPath, mysql) -> None:
         cursor = mysql.cursor()
         
         query = (f'''delete from wp_blogs where user_id = {blogID} and path = "{blogPath}"''')
@@ -55,7 +55,7 @@ class wp:
         
         cursor.close()
     
-    def get_posts(self) -> List[str]:       
+    def get_posts(self) -> List[str]:  
         response = requests.get(f"{self.api_url}posts")
         if response.status_code != 200:
             return []

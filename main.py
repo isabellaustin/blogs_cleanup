@@ -2,7 +2,7 @@ import requests
 import json
 import sys
 from wordpress import wp
-import colorama
+import colorama  # for colorama.init
 from colorama import Fore, Back
 import mysql.connector
 
@@ -111,23 +111,25 @@ if __name__ == "__main__":
     # print(sites_tbd)
 
     # # DELETE USERS
+    """deleting the inactive users across all blogs"""    
     # for u in users_tbd:
     #     try:
     #         username = id_username[u]
     #     except KeyError as KE:
     #         continue
-    #     print(u)
-    #     blogs.delete_user(u,username) #id, user_login
-    #     print(f"{Back.GREEN}{username} was deleted from the database.{Back.RESET}")
+    #     # print(u)
+    #     blogs.delete_user(u, username, cnx) #id, user_login
+    #     print(f"{Back.GREEN}User {username} was deleted from the database.{Back.RESET}")
 
     # # DELETE SITES
+    """deleting abandoned blogs"""    
     # for u in sites_tbd:
     #     try:
     #         path = sites[u]
     #     except KeyError as KE:
     #         continue
-    #     blogs.delete_blog(u,path) #blog_id, path
-    #     print(f"{Back.GREEN}{path} was deleted from the database.{Back.RESET}")
+    #     blogs.delete_blog(u, path, cnx) #blog_id, path
+    #     print(f"{Back.GREEN}Blog {path} was deleted from the database.{Back.RESET}")
     
     #============================================================================================================================================
     
