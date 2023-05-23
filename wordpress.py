@@ -38,16 +38,22 @@ class wp:
         cursor.close()
     
 
-    def get_sites(self) -> List[str]:
-        return []
-    
+    def delete_user(self, userID, userLogin, mysql) -> None: 
+        cursor = mysql.cursor()
+        
+        query = (f'''delete from wp_users where ID = {userID} and user_login = {userLogin}''')
+        cursor.execute(query)
+        
+        cursor.close()
 
-    def get_site_users(self, site: int = 1) -> List[str]:
-        return []
-    
 
-    def delete_user(self) -> List[str]:
-        return []
+    def delete_blog(self, blogID, blogPath, mysql) -> None:   
+        cursor = mysql.cursor()
+        
+        query = (f'''delete from wp_blogs where user_id = {blogID} and path = "{blogPath}"''')
+        cursor.execute(query)
+        
+        cursor.close()
     
     def get_posts(self) -> List[str]:       
         response = requests.get(f"{self.api_url}posts")
@@ -66,7 +72,8 @@ class wp:
 
     
     def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
-        """Finds the difference between the list of current usersr and all active users (all_users.txt) on blogs.butler.edu
+        """Finds the difference between the list of current users and all active users 
+            (all_users.txt) on blogs.butler.edu
 
         Args:
             exclude (list[str], optional): _description_. Defaults to [].
@@ -75,7 +82,6 @@ class wp:
         Returns:
             List[str]: _description_
         """
-
         all_users = set(line.strip().lower() for line in open('all_users.txt')
                         if line.strip() not in exclude)
         # blogs_users = set(line.strip().lower() for line in open('blogs_users.txt')
@@ -106,7 +112,7 @@ class wp:
             return []
             
 
-    def get_id_username(self, id_username, mysql): # -> dict[int,str]: 
+    def get_id_username(self, id_username, mysql) -> None: 
         """Gets the id and username of blogs users with Butler emails.
 
         Args:
@@ -128,16 +134,15 @@ class wp:
         # cnx.close()
 
     
-    def get_user_blogs(self, user_blogs, mysql): # -> dict[int,str]: 
-        """Gets all the blog ids and blog paths associated with one blogs users (get_site_users).
+    def get_user_blogs(self, user_blogs, mysql) -> None: 
+        """Gets all the blog ids and blog paths.
 
         Args:
             user_blogs (_type_): _description_
             mysql (_type_): _description_
         """        
         cursor = mysql.cursor()
-        
-        #need to find all the blog paths associated with one user_id/email
+
         query = ('''select blog_id, path 
                     from wp_blogs''')
         cursor.execute(query)
@@ -148,7 +153,7 @@ class wp:
         cursor.close()
 
 
-    def get_outside_users(self, outside_users, mysql): # -> dict[int,str]: 
+    def get_outside_users(self, outside_users, mysql) -> None:
         """Gets the id, username, and registration date of blogs users with non-Butler emails.
 
         Args:
@@ -166,4 +171,3 @@ class wp:
             outside_users [id, user_registered] = user_email
 
         cursor.close()
-

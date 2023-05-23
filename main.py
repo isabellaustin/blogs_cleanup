@@ -29,80 +29,118 @@ if __name__ == "__main__":
                 username = cfg["username"],
                 password = cfg["password"])
 
-    #============================================================================================================================================
+    """creates a file with a list of non-Butler users (i.e. users with emails that don't end in '@butler.edu')"""    
     outside_users = {}
     blogs.get_outside_users(outside_users, cnx)
-    data = outside_users.values()
+    outside_data = outside_users.values()
     with open("outside_users.txt", "w") as f:
-        for d in data:
+        for d in outside_data:
             if d not in exclude_outside_users:
                 f.write("%s\n" % d)    
 
+    """creates a list of ids and usernames of blogs users with Butler emails"""    
     id_username = {}
     blogs.get_id_username(id_username, cnx)
 
+    """creates a list of inactive users by finding the difference between the list of current users (created id_username list) 
+        and all active users"""
     data = blogs.get_inactive_users(exclude = exclude_users, blogs_users=id_username.values()) #all butler users that
 
+    """creates a list of blogs in the database"""
     user_blogs = {}
     blogs.get_user_blogs(user_blogs, cnx)
     sites = user_blogs.values()
 
-    site_stats = {}
+    #============================================================================================================================================
+    # STATS
+    site_stats = {} #tracks whether a site is kept or archived
     indv_user_stats = {} #tracks users on one site
 
-    #============================================================================================================================================
+    overall_kept_sites = 0
+    overall_del_sites = 0
+    overall_kept_users = 0
+    overall_del_users = 0
 
+    sites_tbd = [] #blogs to be deleted
+    users_tbd = [] #users to be deleted
+    # keyErr_users = []
+    
     for site in sites:
-        # SITE STATS
         site_stats[site] = {"archive":0, "keep":0}
-        overall_kept_sites = 0
-        overall_del_sites = 0
-        
-        # USER STATS
         indv_user_stats[site] = {"remove":0, "keep":0}
-        overall_kept_users = 0
-        overall_del_users = 0
 
+        """gets the list of users on a site"""        
         site_users = blogs.get_site_users(site)
         remaining_users = len(site_users)
 
         for u in site_users:
-            try:
-                username = id_username[u]
-            except KeyError as KE:
-                continue
-            if username in data: 
+            username = id_username[u]
+            # try:
+            #     username = id_username[u]
+            # except KeyError as KE:
+            #     keyErr_users.append(u)
+            #     print(keyErr_users)
+            #     continue
+            if username in data: #if user is inactive
                 print(f"{Fore.RED}{username} will be removed from {site}")
+                
                 remaining_users-=1
-
                 overall_del_users+=1
                 indv_user_stats[f"{site}"]["remove"]+=1
+                users_tbd.append(f"{username}")             
             else:
                 print(f"{Fore.GREEN}{username} will not be removed from {site}")
 
                 indv_user_stats[f"{site}"]["keep"]+=1
-        
         if remaining_users == 0:
-            print(f"{Back.RED}{site} has no remaining users and will be archived{Back.RESET}")
+            print(f"{Fore.WHITE}{Back.RED}{site} has no remaining users and will be archived{Back.RESET}")
 
             site_stats[f"{site}"]["archive"]+=1
             overall_del_sites+=1
+            sites_tbd.append(f"{site}") 
         else:
             site_stats[f"{site}"]["keep"]+=1
-
             overall_kept_sites+=1
             overall_kept_users+=remaining_users
 
         # print(f"The amount of users removed from {site}: {indv_user_stats[site]['remove']}")
         # print(f"The amount of remaining on {site}: {indv_user_stats[site]['keep']}")
 
+    # print(users_tbd)
+    # print(sites_tbd)
+
+    # DELETE USERS
+    # for u in users_tbd:
+    #     try:
+    #         username = id_username[u]
+    #     except KeyError as KE:
+    #         continue
+    #     print(u)
+    #     blogs.delete_user(u,username) #id, user_login
+    #     print(f"{Back.GREEN}{username} was deleted from the database.{Back.RESET}")
+
+
+    # DELETE SITES
+    # for u in sites_tbd:
+    #     try:
+    #         path = sites[u]
+    #     except KeyError as KE:
+    #         continue
+    #     blogs.delete_blog(u,path) #blog_id, path
+    #     print(f"{Back.GREEN}{path} was deleted from the database.{Back.RESET}")
+
     
     #============================================================================================================================================
     
     cnx.close()
 
-    # print(f"The amount of sites archived: {overall_del_sites}")
-    # print(f"The amount of sites kept: {overall_kept_sites}")
+    print(f"The amount of sites archived: {overall_del_sites}")
+    print(f"The amount of sites kept: {overall_kept_sites}")
 
-    # print(f"The amount of users remaining across all sites: {overall_kept_users}")
-    # print(f"The amount of users removed across all sites: {overall_del_users}")
+    print(f"The amount of Butler users remaining across all sites: {overall_kept_users}")
+    print(f"The amount of Butler users removed across all sites: {overall_del_users}")
+
+    print(f"The amount of non-Butler users removed from the site (?): {len(outside_data)}")
+
+
+# what percent of users where inactive/deleted
