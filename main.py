@@ -7,8 +7,6 @@ from colorama import Fore, Back
 import mysql.connector
 
 def main(blogs) -> None:
-    
-    # STATS
     site_stats = {} #tracks whether a site is kept or archived
     indv_user_stats = {} #tracks users on one site
 
@@ -20,8 +18,6 @@ def main(blogs) -> None:
     sites_tbd = [] #blogs to be deleted
     users_tbd = [] #users to be deleted
     # keyErr_users = []
-
-#NEW FUNC =======================================================================================================================================
 
     """creates a file with a list of non-Butler users (i.e. users with emails that don't end in '@butler.edu')"""    
     outside_users = {}
@@ -39,8 +35,6 @@ def main(blogs) -> None:
     """creates a list of inactive users by finding the difference between the list of current users (created id_username list) 
         and all active users"""
     inactive_data = blogs.get_inactive_users(exclude = exclude_users, blogs_users=id_username.values())
-
-#NEW FUNC =======================================================================================================================================
 
     """creates a list of blogs in the database"""
     user_blogs = {}
@@ -83,35 +77,47 @@ def main(blogs) -> None:
         # print(f"The amount of users removed from {site}: {indv_user_stats[site]['remove']}")
         # print(f"The amount of remaining on {site}: {indv_user_stats[site]['keep']}")
     
+    blog_deletion(cnx, id_username, users_tbd, sites_tbd)
     cnx.close()
-    deletion(cnx, id_username, users_tbd, sites_tbd)
     get_stats(inactive_data, outside_data, sites, overall_kept_sites, overall_del_sites, overall_kept_users, overall_del_users)
 
-
-def deletion(mysql, id_username, users, sites) -> None:
-    # print(users_tbd)
-    # print(sites_tbd)
-
-    # DELETE USERS
+def user_deletion(id_username, site_users, users) -> None:
     """deleting the inactive users across all blogs"""    
-    # for u in users: #users_tbd
-    #     try:
-    #         username = id_username[u]
-    #     except KeyError as KE:
-    #         continue
-    #     # print(u)
-    #     blogs.delete_user(u, username, cnx) #id, user_login
-    #     print(f"{Back.GREEN}User {username} was deleted from the database.{Back.RESET}")
+    for u in site_users: #users_tbd
+        try:
+            username = id_username[u]
+        except KeyError as KE:
+            continue
+    
+        # buwebservices numeric ID = 9197309
+        # https://developer.wordpress.org/cli/commands/user/delete/    
+        
+        blogs.create_user("buwebservices")
+        blogs.reassign_user(u, 9197309) # reassigns and deletes, can you reassign without deleting
+        # blogs.network_del_user(u)
+        users.remove(f"{username}")
+        print(f"{Back.GREEN}User {username} was deleted from the database.{Back.RESET}")
 
-    # DELETE SITES
-    """deleting abandoned blogs"""    
-    # for u in sites: #sites_tbd
-    #     try:
-    #         path = sites[u]
-    #     except KeyError as KE:
-    #         continue
-    #     blogs.delete_blog(u, path, cnx) #blog_id, path
-    #     print(f"{Back.GREEN}Blog {path} was deleted from the database.{Back.RESET}")
+def blog_deletion(cnx, id_username, users, sites) -> None:
+    """archiving blogs if they are abandoned, otherwise, deleting necessary users"""    
+    for u in sites: #sites_tbd
+        try:
+            path = sites[u]
+        except KeyError as KE:
+            continue
+        
+        site_users = blogs.get_site_users(u)
+
+        if len(site_users) == 0:
+            blogs.archive_blog(u) #blog_id
+            print(f"{Back.GREEN}Blog {path} was archived.{Back.RESET}")
+        else: 
+            user_deletion(id_username, site_users)
+
+    # for u in users:
+    #     blogs.network_del_user(u)
+
+    # print(users)
 
    
 def get_stats(inactive, outside, sites, kept_sites, del_sites, kept_users, del_users) -> None:

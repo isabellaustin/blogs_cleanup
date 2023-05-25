@@ -5,6 +5,7 @@ import base64
 import colorama
 from colorama import Fore, Back
 import sys
+import subprocess
 
 class wp:
     def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
@@ -18,43 +19,59 @@ class wp:
 
     def __str__(self) -> str:
         return f"<wp({self.url})>"
+
+
+    def make_cred(self) -> None:
+        credentials = self.username + ":" + self.password
+        self.token = base64.b64encode(credentials.encode()).decode('utf-8')
+
     
+    def create_user(self, username: str = "") -> dict:
+        """adds a user to a blog
 
-    def get_users(self, user, mysql) -> List[str]:
-        # response = requests.get(f"{self.api_url}users", headers = self.headers)
-        # data = response.json()
-        # print(data)
-        # return [u['slug'] for u in data]
-    
-        cursor = mysql.cursor()
-            
-        query = ('''select id, user_login')
-                    from wp_users''')
-        cursor.execute(query)
+        Args:
+            username (str, optional): _description_. Defaults to "".
 
-        for(id, user_login) in cursor:
-            user [id] = user_login
-
-        cursor.close()
-    
-
-    def delete_user(self, userID, userLogin, mysql) -> None:
-        cursor = mysql.cursor()
-        
-        query = (f'''delete from wp_users where ID = {userID} and user_login = {userLogin}''')
-        cursor.execute(query)
-        
-        cursor.close()
+        Returns:
+            dict: _description_
+        """          
+        response = requests.post(f"{self.api_url}users")
+        if response.status_code != 200:
+            return response.json()
 
 
-    def delete_blog(self, blogID, blogPath, mysql) -> None:
-        cursor = mysql.cursor()
-        
-        query = (f'''delete from wp_blogs where user_id = {blogID} and path = "{blogPath}"''')
-        cursor.execute(query)
-        
-        cursor.close()
-    
+    def reassign_user(self, user_id, new_id) -> None:
+        """deletes user and reassigns their posts to declared user
+
+        Args:
+            user_id (_type_): _description_
+            new_id (_type_): _description_
+        """        
+        # Delete user {user_id} and reassign posts to user {new_id}
+        p = subprocess.run(f"wp user delete {user_id} --reassign={new_id}", capture_output=True)
+        # print(p.stdout)
+
+
+    def network_del_user(self, user_id) -> None:
+        """delete the user from the entire network
+
+        Args:
+            user_id (_type_): _description_
+        """        
+        p = subprocess.run(f"wp user delete {user_id} --network", capture_output=True)
+        # print(p.stdout)
+
+
+    def archive_blog(self, blog_id) -> None:
+        """archive the blog
+
+        Args:
+            blog_id (_type_): _description_
+        """        
+        p = subprocess.run(f"wp site archive {blog_id}", capture_output=True)
+        # print(p.stdout)
+
+
     def get_posts(self) -> List[str]:  
         response = requests.get(f"{self.api_url}posts")
         if response.status_code != 200:
@@ -64,11 +81,6 @@ class wp:
         #     results.append(post["title"]["rendered"])
         # return results
         return [post["title"]["rendered"] for post in response.json()]
-    
-
-    def make_cred(self) -> None:
-        credentials = self.username + ":" + self.password
-        self.token = base64.b64encode(credentials.encode()).decode('utf-8')
 
     
     def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
@@ -119,11 +131,9 @@ class wp:
             id_username (_type_): _description_
             mysql (_type_): _description_
         """        
-        # cnx = mysql.connector.connect(user="wordpress", password="4AbyJVrcPTH6aHgfAqt3", host="mysql-1.butler.edu", database="wp_blogs_dev")
         cursor = mysql.cursor()
         
-        query = ('''select id, user_email 
-                    from wp_users''')
+        query = ('''select id, user_email from wp_users''')
                     # where user_email like "%@butler.edu"
         cursor.execute(query)
 
@@ -143,8 +153,7 @@ class wp:
         """        
         cursor = mysql.cursor()
 
-        query = ('''select blog_id, path 
-                    from wp_blogs''')
+        query = ('''select blog_id, path from wp_blogs''')
         cursor.execute(query)
 
         for(blog_id, path) in cursor:
