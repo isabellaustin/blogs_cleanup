@@ -14,7 +14,7 @@ class wp:
         self.username = username
         self.password = password
         self.make_cred()
-        self.headers = {'Authorization': f'Basic {self.token}'}
+        self.headers = {'Authorization': f'Basic {self.token}', 'connection': 'close'}
 
 
     def __str__(self) -> str:
@@ -48,7 +48,7 @@ class wp:
             new_id (_type_): _description_
         """        
         # Delete user {user_id} and reassign posts to user {new_id}
-        p = subprocess.run(f"wp user delete {user_id} --reassign={new_id}", capture_output=True)
+        p = subprocess.run(f"wp user delete {user_id} --reassign={new_id}", shell=True, capture_output=True)
         # print(p.stdout)
 
 
@@ -58,7 +58,7 @@ class wp:
         Args:
             user_id (_type_): _description_
         """        
-        p = subprocess.run(f"wp user delete {user_id} --network", capture_output=True)
+        p = subprocess.run(f"wp user delete {user_id} --network", shell=True, capture_output=True)
         # print(p.stdout)
 
 
@@ -68,7 +68,7 @@ class wp:
         Args:
             blog_id (_type_): _description_
         """        
-        p = subprocess.run(f"wp site archive {blog_id}", capture_output=True)
+        p = subprocess.run(f"wp site archive {blog_id}", shell=True, capture_output=True)
         # print(p.stdout)
 
 

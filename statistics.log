@@ -1,0 +1,16 @@
+2023-06-05 13:59:16,472 - __main__ - INFO - Initial number of sites: 8610
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of sites kept: 9
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of sites archived: 1
+
+2023-06-05 13:59:16,472 - __main__ - INFO - Initial number of Butler users across all sites: 39
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of inactive Butler users across all sites: 3092
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of non-Butler users across all sites: 1417
+
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of Butler users remaining across all sites: 20
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of Butler users removed across all sites: 19
+2023-06-05 13:59:16,472 - __main__ - INFO - Number of non-Butler users removed (?) across all sites: 1417
+
+2023-06-05 13:59:16,472 - __main__ - INFO - Total number of Butler users in the network: 3110 (3092 inactive, 18 active)
+2023-06-05 13:59:16,472 - __main__ - INFO - Percent decrease in blogs: 0.01%
+2023-06-05 13:59:16,472 - __main__ - INFO - Percent decrease in Butler users: 48.72%
+
