@@ -8,7 +8,7 @@ import mysql.connector
 from tqdm.auto import tqdm
 import logging
 
-def main(blogs) -> None:    
+def main(blogs) -> None:
     #stat variables
     all_kept_sites = 0
     all_del_sites = 0
