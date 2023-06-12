@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 import logging
 
 def main(blogs) -> None:
-    #stat variables
+    """stat variables"""
     all_kept_sites = 0
     all_del_sites = 0
 
@@ -18,8 +18,9 @@ def main(blogs) -> None:
     all_del_users = []
     all_del_users_unique = []
 
-    sites_tbd = [] #blogs to be deleted
-    users_tbd = [] #users to be deleted
+    #tbd: to be deleted
+    sites_tbd = {}
+    users_tbd = {}
 
     elapsed = []
     sum_elapsed = 0
@@ -47,33 +48,20 @@ def main(blogs) -> None:
     blogs.get_user_blogs(user_blogs, cnx)
     sites = list(user_blogs.keys()) #gets site id
 
-    # for site in tqdm(sites): #tqdm(list(sites)[:6000]); 17 minutes to run all, end result .12
-    #     site_path = user_blogs[site]
-    #     result = requests.get(f"https://blogs-dev.butler.edu{site_path}wp-json/wp/v2/users")
-    #     elapsed.append(result.elapsed)
-        
-    #     sum_elapsed += result.elapsed.total_seconds()
-
-    # avg_elapsed = '{:.2f}'.format(sum_elapsed / len(elapsed))
-    # print(f"Average elapsed time: {avg_elapsed} microseconds")
-
-    # sys.exit()
-
-
     for site in sites: #tqdm(sites[:1000], position=0):
-    # eventually not print out what all needs to kept and deleted and just use a progress bar..?
         """gets the list of users on a site"""        
         site_users = blogs.get_site_users(site, cnx) #necessary sites aren't excluded, such as buwebservices
         remaining_users = len(site_users)
         site_path = user_blogs[site]
          
         for u in site_users: 
-            username = id_username[u]
+            username = id_username[u] # key: id, value: username
 
             if username in inactive_data: #if user is inactive
                 print(f"{Fore.RED}{username} will be removed from {site_path}")
             
-                users_tbd.append(f"{username}")
+                # users_tbd.append(f"{username}")
+                users_tbd[username] = u # key: username, value: id
                 remaining_users-=1
 
                 all_del_users.append(f"{username}")
@@ -90,76 +78,77 @@ def main(blogs) -> None:
             print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Back.RESET}")
 
             all_del_sites+=1
-            sites_tbd.append(f"{site}") 
+            # sites_tbd.append({site_path}) 
+            sites_tbd[site_path] = site # key: path, value: id
         else:
             all_kept_sites+=1
 
         index_num = int(list(sites).index(site)) + 1 #starts at 1 instead of 0
         print(f"SITE {index_num} OF {len(sites)}")    # prints out "site x of 8610"
 
-        # blog_deletion(id_username, users_tbd, sites_tbd)
-
-    # print(users_tbd)
-    # print(f"{sites_tbd}\n")
+    blog_deletion(sites_tbd)
+    user_deletion(users_tbd)
 
     cnx.close()
+
     get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, all_kept_users, all_del_users, all_kept_users_unique, elapsed, sum_elapsed)
 
 
-def user_deletion(id_username, site_users, users) -> None:
-    """deleting the inactive users across all blogs"""    
-    for u in site_users: #users_tbd
-        username = id_username[u]
+def blog_deletion(sites_tbd) -> None:
+    """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
+    #  site should already have zero users if its been put into the  sites_tbd list
 
-        # buwebservices numeric ID = 9197309
-        # https://developer.wordpress.org/cli/commands/user/delete/    
+    sites = list(sites_tbd.keys())
+
+    for site in sites:
+        # print(sites_tbd[site])
         
-        blogs.create_user("buwebservices")
-        blogs.reassign_user(u, 9197309) # reassigns and deletes, can you reassign without deleting
+        # blogs.archive_blog(sites_tbd[site]) #sites_tbd[site] = blog_id
+        # sites_tbd.pop(f"{site}")
+
+        print(f"{Fore.WHITE}{Back.GREEN}Blog {site} was archived.{Back.RESET}")
+
+
+def user_deletion(users_tbd) -> None:
+    """deleting the inactive users across all blogs and reassigning their content to buwebservices""" 
+    # buwebservices numeric ID = 9197309
+    # https://developer.wordpress.org/cli/commands/user/delete/
+    
+    users = list(users_tbd.keys())  
+           
+    for u in users:
+        # print(users_tbd[u])
+
+        # blogs.create_user("buwebservices")
+        # blogs.reassign_user(u, 9197309) # reassigns and deletes, can you reassign without deleting
         # blogs.network_del_user(u)
-        users.remove(f"{username}")
-        print(f"{Back.GREEN}User {username} was deleted from the database.{Back.RESET}")
 
+        # users_tbd.pop(f"{u}") # removes user from users_tbd list
 
-def blog_deletion(id_username, users, sites) -> None:
-    """archiving blogs if they are abandoned, otherwise, deleting necessary users"""    
-    for u in sites: #sites_tbd
-        path = sites[u]
-       
-        site_users = blogs.get_site_users(u)
-
-        if len(site_users) == 0:
-            blogs.archive_blog(u) #blog_id
-            print(f"{Back.GREEN}Blog {path} was archived.{Back.RESET}")
-        else: 
-            user_deletion(id_username, site_users, users)
-
-    # for u in users:
-    #     blogs.network_del_user(u)
-
-    # print(users)
+        print(f"{Fore.WHITE}{Back.GREEN}User {u} was deleted from the database.{Back.RESET}")
 
 
 def get_stats(inactive, outside, sites, kept_sites, del_sites, kept_users, del_users, kept_unique, elapsed, sum_elapsed) -> None:
     logger.setLevel(logging.INFO)
     
     """output statisitics"""    
-    # BLOGS
-    logger.info(f"Initial number of sites: {len(sites)}")
-
-    logger.info(f"Number of sites kept: {kept_sites}")
-    logger.info(f"Number of sites archived: {del_sites}\n")
-
-    # USERS
+    # INITIAL
     total_bu_users = len(kept_users) + len(del_users)
     logger.info(f"Initial number of Butler users across all sites: {total_bu_users}")
+    logger.info(f"Initial number of sites: {len(sites)}")
     logger.info(f"Number of inactive Butler users across all sites: {len(inactive)}")
     logger.info(f"Number of non-Butler users across all sites: {len(outside)}\n")
     
-    logger.info(f"Number of Butler users remaining across all sites: {len(kept_users)}")
+    # REMAINING 
+    logger.info(f"Number of sites remaining: {kept_sites}")
+    logger.info(f"Number of Butler users remaining across all sites: {len(kept_users)}\n")
+
+    # CLEANUP
+    logger.info(f"Number of sites archived: {del_sites}")
     logger.info(f"Number of Butler users removed across all sites: {len(del_users)}")
     logger.info(f"Number of non-Butler users removed (?) across all sites: {len(outside)}\n") # are all non butler users being removed?
-
+    
+    # STATISTICS
     total_net_users = len(inactive) + len(kept_unique)
     logger.info(f"Total number of Butler users in the network: {total_net_users} ({len(inactive)} inactive, {len(kept_unique)} active)")
 
@@ -169,10 +158,7 @@ def get_stats(inactive, outside, sites, kept_sites, del_sites, kept_users, del_u
 
     perc_user_cleanup = (len(del_users) / total_bu_users) * 100
     perc_uformat = '{:.2f}'.format(perc_user_cleanup)
-    logger.info(f"Percent decrease in Butler users: {perc_uformat}%\n")
-
-    # avg_elapsed = '{:.2f}'.format(sum_elapsed / len(elapsed))
-    logger.info(f"Average elapsed time: 0.12 microseconds") #0.12 microseconds
+    logger.info(f"Percent decrease in Butler users: {perc_uformat}%")
 
 
 if __name__ == "__main__":

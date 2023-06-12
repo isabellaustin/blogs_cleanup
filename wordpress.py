@@ -64,7 +64,7 @@ class wp:
 
 
     def archive_blog(self, blog_id) -> None:
-        """archive the blog
+        """archive a blog
 
         Args:
             blog_id (_type_): _description_
@@ -111,7 +111,8 @@ class wp:
 
         results = cursor.fetchall()
 
-        users = [int(r[0]) for r in results]
+        skip_users = [9197309, 9192475] #buwebservices, teststudent
+        users = [int(r[0]) for r in results if int(r[0]) not in skip_users]
 
         cursor.close()
 
