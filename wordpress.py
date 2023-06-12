@@ -6,6 +6,7 @@ import colorama
 from colorama import Fore, Back
 import sys
 import subprocess
+import mysql.connector
 
 class wp:
     def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
@@ -15,7 +16,7 @@ class wp:
         self.password = password
         self.make_cred()
         self.headers = {'Authorization': f'Basic {self.token}', 'connection': 'close'}
-
+        self.session = requests.Session()
 
     def __str__(self) -> str:
         return f"<wp({self.url})>"
@@ -25,7 +26,7 @@ class wp:
         credentials = self.username + ":" + self.password
         self.token = base64.b64encode(credentials.encode()).decode('utf-8')
 
-    
+
     def create_user(self, username: str = "") -> dict:
         """adds a user to a blog
 
@@ -35,7 +36,7 @@ class wp:
         Returns:
             dict: _description_
         """          
-        response = requests.post(f"{self.api_url}users")
+        response = self.session.post(f"{self.api_url}users", headers = self.headers)
         if response.status_code != 200:
             return response.json()
 
@@ -71,17 +72,6 @@ class wp:
         p = subprocess.run(f"wp site archive {blog_id}", shell=True, capture_output=True)
         # print(p.stdout)
 
-
-    def get_posts(self) -> List[str]:  
-        response = requests.get(f"{self.api_url}posts")
-        if response.status_code != 200:
-            return []
-        # results = []
-        # for post in response.json():
-        #     results.append(post["title"]["rendered"])
-        # return results
-        return [post["title"]["rendered"] for post in response.json()]
-
     
     def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
         """Finds the difference between the list of current users and all active users 
@@ -98,30 +88,34 @@ class wp:
                         if line.strip() not in exclude)
         # blogs_users = set(line.strip().lower() for line in open('blogs_users.txt')
         #                   if line.strip() not in exclude)
-        difference = set(blogs_users).difference(all_users) #the ones that aren't in both; returns users that are in blogs and not active
-        intersect = set(blogs_users).intersection(all_users) #the ones that are in both; returns active blogs users
+        difference = set(blogs_users).difference(all_users)
+        intersect = set(blogs_users).intersection(all_users)
         return difference
+         
     
-
-    def get_site_users(self, slug: str = "/") -> List[str]:
+    def get_site_users(self, site_id, mysql) -> List[str]: 
         """Gets the users for a specific site.
 
         Args:
-            slug (str, optional): _description_. Defaults to "/".
+            site_id (_type_): _description_
+            mysql (_type_): _description_
 
         Returns:
             List[str]: _description_
-        """       
-        colorama.init(autoreset=True)
-        site_url = f"{self.url}{slug}wp-json/wp/v2/users"
-        response = requests.get(site_url, headers = self.headers)
-        if response.status_code == 200:
-            data = response.json()
-            return [int(item["id"]) for item in data]
-        else:
-            print(f"{Fore.WHITE}{Back.BLACK}Status code {response.status_code} on {slug}{Back.RESET}")
-            # sys.exit()
-            return []
+        """            
+        cursor = mysql.cursor()
+        query = ('''select * from wp_users 
+                    u join wp_usermeta um on u.id=um.user_id 
+                    where um.meta_key="wp_%s_capabilities"''')
+        cursor.execute(query, (site_id,))
+
+        results = cursor.fetchall()
+
+        users = [int(r[0]) for r in results]
+
+        cursor.close()
+
+        return users
             
 
     def get_id_username(self, id_username, mysql) -> None: 
