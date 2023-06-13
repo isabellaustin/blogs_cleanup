@@ -42,13 +42,12 @@ class wp:
 
 
     def reassign_user(self, user_id, new_id) -> None:
-        """deletes user and reassigns their posts to declared user
+        """deletes user {user_id} and reassigns their posts to declared user {new_id}
 
         Args:
-            user_id (_type_): _description_
-            new_id (_type_): _description_
+            user_id (int): unique id number
+            new_id (int): the id that the soon-to-be-deleted user's content will be transfered to
         """        
-        # Delete user {user_id} and reassign posts to user {new_id}
         p = subprocess.run(f"wp user delete {user_id} --reassign={new_id}", shell=True, capture_output=True)
         # print(p.stdout)
 
@@ -57,20 +56,18 @@ class wp:
         """delete the user from the entire network
 
         Args:
-            user_id (_type_): _description_
+            user_id (int): unique id number
         """        
-        p = subprocess.run(f"wp user delete {user_id} --network", shell=True, capture_output=True)
-        # print(p.stdout)
+        subprocess.run(f"wp user delete {user_id} --network", shell=True, capture_output=True)
 
 
     def archive_blog(self, blog_id) -> None:
         """archive a blog
 
         Args:
-            blog_id (_type_): _description_
+            blog_id (int): unique id number
         """        
-        p = subprocess.run(f"wp site archive {blog_id}", shell=True, capture_output=True)
-        # print(p.stdout)
+        subprocess.run(f"wp site archive {blog_id}", shell=True, capture_output=True)
 
     
     def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
@@ -82,26 +79,24 @@ class wp:
             blogs_users (list[str], optional): _description_. Defaults to [].
 
         Returns:
-            List[str]: _description_
+            List[str]: a list of inactive users
         """
         all_users = set(line.strip().lower() for line in open('all_users.txt')
                         if line.strip() not in exclude)
-        # blogs_users = set(line.strip().lower() for line in open('blogs_users.txt')
-        #                   if line.strip() not in exclude)
         difference = set(blogs_users).difference(all_users)
-        intersect = set(blogs_users).intersection(all_users)
+
         return difference
-         
+
     
     def get_site_users(self, site_id, mysql) -> List[str]: 
         """Gets the users for a specific site.
 
         Args:
-            site_id (_type_): _description_
-            mysql (_type_): _description_
+            site_id (int): unique id number
+            mysql (connector): SQL connection
 
         Returns:
-            List[str]: _description_
+            List[str]: list of site users
         """            
         cursor = mysql.cursor()
         query = ('''select * from wp_users 
@@ -123,28 +118,26 @@ class wp:
         """Gets the id and username of blogs users with Butler emails.
 
         Args:
-            id_username (_type_): _description_
-            mysql (_type_): _description_
+            id_username (dict): empty dict that is to-be appended in this function
+            mysql (connector): SQL connection
         """        
         cursor = mysql.cursor()
         
         query = ('''select id, user_email from wp_users''')
-                    # where user_email like "%@butler.edu"
         cursor.execute(query)
 
         for(id, user_email) in cursor:
             id_username [id] = user_email.split('@')[0]
 
         cursor.close()
-        # cnx.close()
 
     
     def get_user_blogs(self, user_blogs, mysql) -> None: 
         """Gets all the blog ids and blog paths.
 
         Args:
-            user_blogs (_type_): _description_
-            mysql (_type_): _description_
+            user_blogs (dict): empty dict that is to-be appended in this function
+            mysql (connector): SQL connection
         """        
         cursor = mysql.cursor()
 
@@ -161,8 +154,8 @@ class wp:
         """Gets the id, username, and registration date of blogs users with non-Butler emails.
 
         Args:
-            outside_users (_type_): _description_
-            mysql (_type_): _description_
+            outside_users (dict): empty dict that is to-be appended in this function
+            mysql (connector): SQL connection
         """        
         cursor = mysql.cursor()
         
@@ -175,3 +168,32 @@ class wp:
             outside_users [id, user_registered] = user_email
 
         cursor.close()
+
+
+    def get_user_login_by_email(self, user_key, mysql) -> None: # user_key = email
+        """Gets the id, login, and email of users with non-Butler emails and returns their
+            user_login as username. With Butler users, their username/user_login is the 
+            first part of their email, but that isn't the case with non-Butler users, so 
+            that is needed to delete the user form the network
+
+        Args:
+            user_key (str): user email
+            mysql (connector): SQL connection
+
+        Returns:
+            str: user_login for a non-Butler user
+        """        
+       
+        cursor = mysql.cursor()
+
+        query = (f'''select id, user_login, user_email from wp_users where user_email = "{user_key}"''')
+        cursor.execute(query)
+
+        results = cursor.fetchall()
+       
+        username = ", ".join(r[1] for r in results)
+        id = ", ".join(str(r[0]) for r in results)
+        
+        cursor.close()
+
+        return username, id

@@ -1,15 +1,12 @@
-2023-06-12 11:45:03,313 - __main__ - INFO - Initial number of Butler users across all sites: 17587
-2023-06-12 11:45:03,314 - __main__ - INFO - Initial number of sites: 8610
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of inactive Butler users across all sites: 3092
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of non-Butler users across all sites: 1417
+2023-06-13 15:40:10,093 - __main__ - INFO - Initial number of sites: 8610
+2023-06-13 15:40:10,093 - __main__ - INFO - Number of Butler users on the network: 9592 (3092 inactive, 6500 active)
+2023-06-13 15:40:10,094 - __main__ - INFO - Number of non-Butler users on the network: 1417
 
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of sites remaining: 7632
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of Butler users remaining across all sites: 14203
+2023-06-13 15:40:10,094 - __main__ - INFO - Number of remaining sites: 7632
+2023-06-13 15:40:10,094 - __main__ - INFO - Number of remaining Butler users: 6500
 
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of sites archived: 978
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of Butler users removed across all sites: 3384
-2023-06-12 11:45:03,314 - __main__ - INFO - Number of non-Butler users removed (?) across all sites: 1417
+2023-06-13 15:40:10,094 - __main__ - INFO - Number of archived sites: 978
+2023-06-13 15:40:10,094 - __main__ - INFO - Number of deleted users: 3116 (1699 Butler, 1417 non-Butler)
 
-2023-06-12 11:45:03,314 - __main__ - INFO - Total number of Butler users in the network: 9592 (3092 inactive, 6500 active)
-2023-06-12 11:45:03,314 - __main__ - INFO - Percent decrease in blogs: 11.36%
-2023-06-12 11:45:03,314 - __main__ - INFO - Percent decrease in Butler users: 19.24%
+2023-06-13 15:40:10,094 - __main__ - INFO - Percent decrease in blogs: 11.36%
+2023-06-13 15:40:10,094 - __main__ - INFO - Percent decrease in Butler users: 41.26%

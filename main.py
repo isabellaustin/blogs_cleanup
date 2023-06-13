@@ -8,22 +8,20 @@ import mysql.connector
 from tqdm.auto import tqdm
 import logging
 
+"""stat variables"""
+all_kept_users = []
+all_kept_users_unique = []
+all_del_users = []
+all_del_users_unique = []
+all_other_del = []
+all_other_del_unique = []
+    #tbd: to be deleted
+sites_tbd = {}
+users_tbd = {}
+
 def main(blogs) -> None:
-    """stat variables"""
     all_kept_sites = 0
     all_del_sites = 0
-
-    all_kept_users = []
-    all_kept_users_unique = []
-    all_del_users = []
-    all_del_users_unique = []
-
-    #tbd: to be deleted
-    sites_tbd = {}
-    users_tbd = {}
-
-    elapsed = []
-    sum_elapsed = 0
 
     """creates a file with a list of non-Butler users (i.e. users with emails that don't end in '@butler.edu')"""    
     outside_users = {}
@@ -32,7 +30,7 @@ def main(blogs) -> None:
     with open("outside_users.txt", "w") as f:
         for d in outside_data:
             if d not in exclude_outside_users:
-                f.write("%s\n" % d)    
+                f.write("%s\n" % d)
 
     """creates a list of ids and usernames of blogs users with Butler emails"""    
     id_username = {}
@@ -50,17 +48,16 @@ def main(blogs) -> None:
 
     for site in sites: #tqdm(sites[:1000], position=0):
         """gets the list of users on a site"""        
-        site_users = blogs.get_site_users(site, cnx) #necessary sites aren't excluded, such as buwebservices
+        site_users = blogs.get_site_users(site, cnx)
         remaining_users = len(site_users)
         site_path = user_blogs[site]
          
         for u in site_users: 
             username = id_username[u] # key: id, value: username
 
-            if username in inactive_data: #if user is inactive
+            if username in inactive_data or username in outside_data: #if user is inactive
                 print(f"{Fore.RED}{username} will be removed from {site_path}")
             
-                # users_tbd.append(f"{username}")
                 users_tbd[username] = u # key: username, value: id
                 remaining_users-=1
 
@@ -78,7 +75,6 @@ def main(blogs) -> None:
             print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Back.RESET}")
 
             all_del_sites+=1
-            # sites_tbd.append({site_path}) 
             sites_tbd[site_path] = site # key: path, value: id
         else:
             all_kept_sites+=1
@@ -87,12 +83,12 @@ def main(blogs) -> None:
         print(f"SITE {index_num} OF {len(sites)}")    # prints out "site x of 8610"
 
     blog_deletion(sites_tbd)
-    user_deletion(users_tbd)
+    # user_deletion(users_tbd)
+    user_deletion(users_tbd, outside_users)
 
     cnx.close()
 
-    get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, all_kept_users, all_del_users, all_kept_users_unique, elapsed, sum_elapsed)
-
+    get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites)
 
 def blog_deletion(sites_tbd) -> None:
     """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
@@ -101,74 +97,94 @@ def blog_deletion(sites_tbd) -> None:
     sites = list(sites_tbd.keys())
 
     for site in sites:
-        # print(sites_tbd[site])
-        
         # blogs.archive_blog(sites_tbd[site]) #sites_tbd[site] = blog_id
+        
         # sites_tbd.pop(f"{site}")
 
-        print(f"{Fore.WHITE}{Back.GREEN}Blog {site} was archived.{Back.RESET}")
+        print(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}")
 
 
-def user_deletion(users_tbd) -> None:
+def user_deletion(users_tbd, outside_users) -> None:
     """deleting the inactive users across all blogs and reassigning their content to buwebservices""" 
     # buwebservices numeric ID = 9197309
     # https://developer.wordpress.org/cli/commands/user/delete/
     
-    users = list(users_tbd.keys())  
+    users = list(users_tbd.keys()) 
            
     for u in users:
-        # print(users_tbd[u])
-
         # blogs.create_user("buwebservices")
         # blogs.reassign_user(u, 9197309) # reassigns and deletes, can you reassign without deleting
         # blogs.network_del_user(u)
 
-        # users_tbd.pop(f"{u}") # removes user from users_tbd list
+        # users_tbd.pop(f'{u}') # removes user from users_tbd list
 
-        print(f"{Fore.WHITE}{Back.GREEN}User {u} was deleted from the database.{Back.RESET}")
+        print(f"(Butler){Fore.WHITE}{Back.RED} USER {u} was deleted from the database.{Back.RESET}") 
+    
+    '''
+    outside_values = list(outside_users.values())
+    for ou in outside_values:
+        username, id = blogs.get_user_login_by_email(ou, cnx) # id returns as a string
+       
+        # blogs.create_user("buwebservices")
+        # blogs.reassign_user(int(id), 9197309) # reassigns and deletes, can you reassign without deleting
+        # blogs.network_del_user(int(id))
+
+        # outside_users.pop(f'{username}') # removes user from users_tbd list
+
+        print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the database.{Back.RESET}")
+        
+        all_other_del.append(f"{username}")
+        if username not in all_other_del_unique: 
+            all_other_del_unique.append(f"{username}") 
+    # '''
 
 
-def get_stats(inactive, outside, sites, kept_sites, del_sites, kept_users, del_users, kept_unique, elapsed, sum_elapsed) -> None:
+def get_stats(inactive, outside, sites, kept_sites, del_sites) -> None:
     logger.setLevel(logging.INFO)
     
     """output statisitics"""    
     # INITIAL
-    total_bu_users = len(kept_users) + len(del_users)
-    logger.info(f"Initial number of Butler users across all sites: {total_bu_users}")
+    total_bu_users = len(all_kept_users_unique) + len(all_del_users_unique)
+    # logger.info(f"Initial number of Butler users across all sites: {total_bu_users}")
     logger.info(f"Initial number of sites: {len(sites)}")
-    logger.info(f"Number of inactive Butler users across all sites: {len(inactive)}")
-    logger.info(f"Number of non-Butler users across all sites: {len(outside)}\n")
+
+    total_net_users = len(inactive) + len(all_kept_users_unique)
+    logger.info(f"Number of Butler users on the network: {total_net_users} ({len(inactive)} inactive, {len(all_kept_users_unique)} active)")
+
+    # logger.info(f"Number of inactive Butler users across all sites: {len(inactive)}")
+    logger.info(f"Number of non-Butler users on the network: {len(outside)}\n")
     
     # REMAINING 
-    logger.info(f"Number of sites remaining: {kept_sites}")
-    logger.info(f"Number of Butler users remaining across all sites: {len(kept_users)}\n")
+    logger.info(f"Number of remaining sites: {kept_sites}")
+    logger.info(f"Number of remaining Butler users: {len(all_kept_users_unique)}\n")
+        # are we keeping any non-BU users?
 
     # CLEANUP
-    logger.info(f"Number of sites archived: {del_sites}")
-    logger.info(f"Number of Butler users removed across all sites: {len(del_users)}")
-    logger.info(f"Number of non-Butler users removed (?) across all sites: {len(outside)}\n") # are all non butler users being removed?
+    logger.info(f"Number of archived sites: {del_sites}")
+    tot_del_users = len(all_del_users_unique) + len(all_other_del_unique)
+    logger.info(f"Number of deleted users: {tot_del_users} ({len(all_del_users_unique)} Butler, {len(all_other_del_unique)} non-Butler)\n")
+    # logger.info(f"Number of Butler users removed across all sites: {len(all_del_users_unique)}")
+    # logger.info(f"Number of non-Butler users removed across all sites: {len(all_other_del_unique)}\n") # are all non butler users being removed?
     
     # STATISTICS
-    total_net_users = len(inactive) + len(kept_unique)
-    logger.info(f"Total number of Butler users in the network: {total_net_users} ({len(inactive)} inactive, {len(kept_unique)} active)")
-
     perc_blog_cleanup = (del_sites / len(sites)) * 100
     perc_bformat = '{:.2f}'.format(perc_blog_cleanup)
     logger.info(f"Percent decrease in blogs: {perc_bformat}%")
 
-    perc_user_cleanup = (len(del_users) / total_bu_users) * 100
+    perc_user_cleanup = (len(all_del_users) / total_bu_users) * 100
     perc_uformat = '{:.2f}'.format(perc_user_cleanup)
     logger.info(f"Percent decrease in Butler users: {perc_uformat}%")
 
 
 if __name__ == "__main__":
-    colorama.init(autoreset=True)
+    colorama.init() #(autoreset=True)
     cnx = mysql.connector.connect(user="wordpress", password="4AbyJVrcPTH6aHgfAqt3", host="docker-dev.butler.edu", database="wp_blogs_dev")
     
     with open('config.json', 'r') as f:
         cfg=json.load(f)
         exclude_users = cfg["exclude_users"]
         exclude_outside_users = cfg["exclude_outside_users"]
+        exclude_all_users = cfg["exclude_all_users"]
 
     blogs = wp(url = cfg["url"],
                 username = cfg["username"],
