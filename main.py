@@ -210,15 +210,15 @@ def fetch_user_sites(outside_users) -> None:
         outside_values = list(outside_users.values())
         for ou in outside_values:
             id = blogs.get_id_by_email(ou, cnx)
-            lst = blogs.get_user_sites(id,cnx)
+            user_sites = blogs.get_user_sites(id,cnx)
             
-            if len(lst) == 0:
+            if len(user_sites) == 0:
                 empty.append(ou)
-            # if len(lst) > 0:
+            # if len(user_sites) > 0:
             #     print(ou)
-            #     print(lst)
+            #     print(user_sites)
 
-            data = [f'{ou}', f'{len(lst)}']
+            data = [f'{ou}', f'{len(user_sites)}']
             writer.writerow(data)
 
 
