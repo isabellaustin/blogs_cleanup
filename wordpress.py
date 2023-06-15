@@ -70,18 +70,27 @@ class wp:
         subprocess.run(f"wp site archive {blog_id}", shell=True, capture_output=True)
 
     
+    def delete_blog(self, blog_id) -> None:
+        """delete a blog
+
+        Args:
+            blog_id (int): unique id number
+        """        
+        subprocess.run(f"wp site delete {blog_id}", shell=True, capture_output=True)
+
+    
     def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
         """Finds the difference between the list of current users and all active users 
             (all_users.txt) on blogs.butler.edu
 
         Args:
-            exclude (list[str], optional): _description_. Defaults to [].
-            blogs_users (list[str], optional): _description_. Defaults to [].
+            exclude (list[str], optional): users to be ignored. Defaults to [].
+            blogs_users (list[str], optional): id_username list. Defaults to [].
 
         Returns:
             List[str]: a list of inactive users
         """
-        all_users = set(line.strip().lower() for line in open('all_users.txt')
+        all_users = set(f"{line.strip().lower()}@butler.edu" for line in open('all_users.txt')
                         if line.strip() not in exclude)
         difference = set(blogs_users).difference(all_users)
 
@@ -127,7 +136,7 @@ class wp:
         cursor.execute(query)
 
         for(id, user_email) in cursor:
-            id_username [id] = user_email.split('@')[0]
+            id_username [id] = user_email
 
         cursor.close()
 
@@ -161,39 +170,62 @@ class wp:
         
         query = ('''select id, user_email, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
                     from wp_users 
-                    where user_email not like "%@butler.edu"''')
+                    where user_email not like "%@butler.edu"''') #strp time
         cursor.execute(query)
 
         for(id, user_email, user_registered) in cursor:
             outside_users [id, user_registered] = user_email
+            # outside_users[int(id)] = {"registered": user_registered, "email": user_email.split('@')[0]}
 
         cursor.close()
 
 
-    def get_user_login_by_email(self, user_key, mysql) -> None: # user_key = email
-        """Gets the id, login, and email of users with non-Butler emails and returns their
-            user_login as username. With Butler users, their username/user_login is the 
-            first part of their email, but that isn't the case with non-Butler users, so 
-            that is needed to delete the user form the network
+    def get_id_by_email(self, user_key, mysql) -> int: # user_key = username/first part of email
+        """Returns the id of users with non-Butler emails
 
         Args:
             user_key (str): user email
             mysql (connector): SQL connection
 
         Returns:
-            str: user_login for a non-Butler user
-        """        
-       
+            str: id for a non-Butler user
+        """ 
         cursor = mysql.cursor()
 
-        query = (f'''select id, user_login, user_email from wp_users where user_email = "{user_key}"''')
+        query = (f'''select id from wp_users where user_email like "{user_key}%"''')
         cursor.execute(query)
 
-        results = cursor.fetchall()
-       
-        username = ", ".join(r[1] for r in results)
-        id = ", ".join(str(r[0]) for r in results)
+        results = cursor.fetchone()
+        # if results is None:
+        #     return -1
+        id = int(results[0]) 
         
         cursor.close()
 
-        return username, id
+        return id
+    
+
+    def get_user_sites(self,user_id:int,mysql) -> list[str]:
+        """Returns a list of sites that a specific user is on
+
+        Args:
+            user_id (int): unique user id number
+            mysql (connector): SQL connection
+
+        Returns:
+            list[str]: list of sites a specific user is on
+        """        
+        cursor = mysql.cursor()
+        
+        query = ('''select * from wp_usermeta where user_id = %s and meta_key like "%capabilities"''')
+        cursor.execute(query, (user_id,))
+
+        results = cursor.fetchall()
+        sites = []
+
+        for r in results:
+            sites.append(r[3].split("_")[0])
+
+        cursor.close()
+
+        return sites
