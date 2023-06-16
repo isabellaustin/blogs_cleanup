@@ -1,12 +1,8 @@
-from typing import List
 import requests
-import json
-import base64
-import colorama
-from colorama import Fore, Back
-import sys
 import subprocess
-import mysql.connector
+import base64
+from typing import List
+from colorama import Fore, Back
 
 class wp:
     def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
@@ -218,13 +214,79 @@ class wp:
         cursor = mysql.cursor()
         
         query = ('''select * from wp_usermeta where user_id = %s and meta_key like "%capabilities"''')
+        # and meta_value like '%administrator'
         cursor.execute(query, (user_id,))
 
         results = cursor.fetchall()
         sites = []
+        site_ids = []
 
         for r in results:
+            try:
+                site_ids.append(int(r[2].split("_")[1]))
+            except ValueError as ve:
+                continue
+            
             sites.append(r[3].split("_")[0])
+
+        cursor.close()
+
+        return site_ids, sites
+    
+    def get_site_info(self,user_id:int,mysql) -> str:
+        """_summary_
+
+        Args:
+            user_id (int): _description_
+            mysql (_type_): _description_
+
+        Returns:
+            list[str]: _description_
+        """            
+        cursor = mysql.cursor()
+        
+        query = ('''select registered, last_updated from wp_blogs where blog_id = "%s"''')
+        # and meta_value like '%administrator'
+        cursor.execute(query, (user_id,))
+
+        results = cursor.fetchall()
+        reg_dates = ""
+        updates = ""
+
+        for r in results:
+            reg_dates = str(r[0]).split(" ")[0] 
+            # year = int(reg_dates.split("-")[0]) 
+            year_month = str(reg_dates[:7]) 
+            # print(reg_dates[:7]) #.split("-")[1])          
+            updates = str(r[1]).split(" ")[0]
+
+        cursor.close()
+
+        return year_month, updates
+    
+
+    # select count(*) from wp_blogs where year(registered) = 2016;
+    def get_year_regs(self,year,mysql) -> str:
+        """_summary_
+
+        Args:
+            user_id (int): _description_
+            mysql (_type_): _description_
+
+        Returns:
+            list[str]: _description_
+        """            
+        cursor = mysql.cursor()
+        
+        query = ('''select count(*) from wp_blogs where year(registered) = %s''')
+        # and meta_value like '%administrator'
+        cursor.execute(query, (year,))
+
+        results = cursor.fetchall()
+        sites = 0
+
+        for r in results:
+            sites = int(r[0])
 
         cursor.close()
 
