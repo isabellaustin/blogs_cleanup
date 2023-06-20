@@ -9,7 +9,8 @@ blogs_users.txt
 delete_users.txt
 outside_users.txt
 sitestats.csv
-teacherstats.csv
+multisite_users.csv
 userdata.csv
+user_sitedata.csv
 sitedata.csv
 yearly_reg.png

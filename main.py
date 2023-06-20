@@ -2,14 +2,13 @@ from wordpress import wp
 import json
 import mysql.connector
 
-import colorama  # for colorama.init
+import colorama
 from colorama import Fore, Back
 from tqdm.auto import tqdm
 
-import sys
 import logging
 import csv
-import pandas as pd
+import collections
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,6 +19,7 @@ all_del_users = []
 all_del_users_unique = []
 all_other_del = []
 all_other_del_unique = []
+dates = []
 nomads = [] #list of users without any sites
 key = []
 
@@ -28,9 +28,7 @@ sites_tbd = {}
 users_tbd = {}
 other_users_tbd = {}
 yearly_reg = {}
-# years = []
-dates = []
-
+#==========================================
 
 def main(blogs) -> None:
     all_kept_sites = 0
@@ -59,10 +57,7 @@ def main(blogs) -> None:
     blogs.get_user_blogs(user_blogs, cnx)
     sites = list(user_blogs.keys()) #gets site id
 
-    id_list = list(id_username.keys())
-    username_list = list(id_username.values())
-
-    # for site in sites: #tqdm(sites[:1000], position=0):
+    # for site in sites:
     #     """gets the list of users on a site"""        
     #     site_users = blogs.get_site_users(site, cnx)
     #     remaining_users = len(site_users)
@@ -108,20 +103,21 @@ def main(blogs) -> None:
 
     id_list = list(id_username.keys())
     username_list = list(id_username.values())
-    
+
+    #==========================================
+    # fetch_multisite_users(id_username)
+    # user_csv(username_list,id_list,user_blogs)
+    site_csv(username_list,id_list,user_blogs)
+
     # blog_deletion()
     # user_deletion(outside_users)
-
-    # fetch_teachers(id_username)
-    # fetch_user_sites(outside_users)
-    # user_csv(username_list,id_list,user_blogs)
-    site_csv(username_list,id_list,user_blogs) #by month??
 
     cnx.close()
 
     get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
 
 
+# DELETION ========================================================================================
 def blog_deletion() -> None:
     """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
     #  site should already have zero users if its been put into the  sites_tbd list
@@ -185,6 +181,7 @@ def user_deletion(outside_users) -> None:
     # print(len(all_other_del_unique))
 
 
+# STATISTICS ======================================================================================
 def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> None:
     logger.setLevel(logging.INFO)
     
@@ -220,41 +217,27 @@ def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> N
     logger.info(f"Percent decrease in users: {perc_uformat}%")
 
 
-def fetch_user_sites(outside_users) -> None:   
+# DATA ============================================================================================
+def fetch_multisite_users(id_username) -> None:  
+    """Gets the email for users that are on 15 or more sites and the amount of sites they're on
+
+    Args:
+        id_username (dict): dict of id and usernames
+    """     
     header = ['user_email', 'num_of_sites'] 
-    with open('sitestats.csv', 'w', encoding='UTF8') as f:
+    with open('multisite_users.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
 
-        outside_values = list(outside_users.values())
-        for ou in outside_values:
-            id = blogs.get_id_by_email(ou, cnx)
-            user_sites = blogs.get_user_sites(id,cnx)
-            
-            if len(user_sites) == 0:
-                nomads.append(ou)
-            # if len(user_sites) > 0:
-            #     print(ou)
-            #     print(user_sites)
-
-            data = [f'{ou}', f'{len(user_sites)}']
-            writer.writerow(data)
-
-
-def fetch_teachers(id_username) -> None:   
-    header = ['user_email', 'num_of_sites'] 
-    with open('teacherstats.csv', 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-
+        print("Fetching multisite users...")
         # outside_values = list(outside_users.values())
         id_list = list(id_username.keys())
         username_list = list(id_username.values())
-        for user in list(all_kept_users_unique):
+        for user in tqdm(list(all_kept_users_unique)):
             index = username_list.index(f"{user}")
             id = id_list[index]
 
-            user_sites = blogs.get_user_sites(id,cnx)
+            user_site_ids, user_sites = blogs.get_user_sites(id,cnx)
             
             if len(user_sites) >= 15:
                 data = [f'{user}', f'{len(user_sites)}']
@@ -262,15 +245,23 @@ def fetch_teachers(id_username) -> None:
 
 
 def user_csv(username_list, id_list, user_blogs) -> None:
+    """Lists the site_id and slug for each site a user is on
+
+    Args:
+        username_list (list): list of just usernames from id_username dict
+        id_list (list): list of just user ids from id_username dict
+        user_blogs (list): list of blogs in the database
+    """    
     header = ["user_id", "user_email", "site_id", "slug"] 
     with open('userdata.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        # print(len(username_list))
+
+        print("Fetching users' site information...")
         for user in tqdm(username_list):
             index = username_list.index(f"{user}")
             id = id_list[index] #user_id
-        
+
             user_site_ids, user_site_roles = blogs.get_user_sites(id,cnx)
             for blog_id in user_site_ids:
                 try:
@@ -282,13 +273,35 @@ def user_csv(username_list, id_list, user_blogs) -> None:
                 data = [f'{id}', f'{user}', f'{blog_id}', f'{path}']
                 writer.writerow(data)
 
+    sites_count = collections.Counter()
+    header = ['user_email', 'num_of_sites'] 
+    with open('sitestats.csv', 'w', encoding='UTF8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        with open('userdata.csv') as input_file:
+            for user in username_list:
+                for row in csv.reader(input_file, delimiter=','):
+                    sites_count[row[1]] += 1
+
+                # if sites_count[user] > 0: #8205
+                data = [f'{user}',f'{sites_count[user]}']
+                writer.writerow(data)
+
 
 def site_csv(username_list, id_list, user_blogs) -> None:
-    header = ["blog_id", "path", "registered", "last_updated"]
+    """Gets blog_id, slug, registered, and last_updated for every site
+
+    Args:
+        username_list (list): list of just usernames from id_username dict
+        id_list (list): list of just user ids from id_username dict
+        user_blogs (list): list of blogs in the database
+    """    
+    header = ["blog_id", "slug", "registered", "last_updated"]
     with open('sitedata.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         
+        print("Fetching site details...")
         for user in tqdm(username_list):
             index = username_list.index(f"{user}")
             user_id = id_list[index]
@@ -297,7 +310,7 @@ def site_csv(username_list, id_list, user_blogs) -> None:
         
             for blog_id in user_site_ids:
                 try:
-                    path = user_blogs[blog_id]
+                    slug = user_blogs[blog_id]
                 except KeyError as ke:
                     key.append(blog_id) #37
                     continue
@@ -313,29 +326,29 @@ def site_csv(username_list, id_list, user_blogs) -> None:
                     # print(year, regs)
                     yearly_reg[year_month] = regs
 
-                data = [f'{blog_id}', f'{path}', f'{year_month}', f'{last_updated}']
+                data = [f'{blog_id}', f'{slug}', f'{year_month}', f'{last_updated}']
                 writer.writerow(data)
     
     date_list = list(yearly_reg.keys())
     ordered_dates = sorted(date_list)
-    # print(ordered_years)
 
     plt.rcParams["figure.figsize"] = [23.50, 8.50]
     plt.rcParams["figure.autolayout"] = True
     plt.plot(ordered_dates, yearly_reg.values())
     plt.xticks(rotation = 90)
-    plt.yticks(np.arange(min(yearly_reg.values()), max(yearly_reg.values())-1, 100))
+    plt.yticks(np.arange(min(yearly_reg.values())-1, max(yearly_reg.values()), 100))
 
-    plt.title("Blog Registration by Month and Year")
+    plt.title("Blog Registration by Date")
     plt.xlabel("Date (yyyy-mm)")
-    plt.ylabel("Amount of Blogs Registered")
+    plt.ylabel("Number of Blogs Registered")
 
     plt.show(block=True)
     plt.savefig('yearly_reg.png')
 
 
+# MAIN ============================================================================================
 if __name__ == "__main__":
-    colorama.init() #(autoreset=True)
+    colorama.init()
     cnx = mysql.connector.connect(user="wordpress", password="4AbyJVrcPTH6aHgfAqt3", host="docker-dev.butler.edu", database="wp_blogs_dev")
     
     with open('config.json', 'r') as f:

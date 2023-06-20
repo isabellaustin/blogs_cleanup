@@ -2,9 +2,9 @@ import requests
 import subprocess
 import base64
 from typing import List
-from colorama import Fore, Back
 
 class wp:
+# INITALIZATION ===================================================================================
     def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
         self.url = url
         self.api_url = f"{self.url}/wp-json/wp/v2/"
@@ -36,6 +36,32 @@ class wp:
         if response.status_code != 200:
             return response.json()
 
+
+# DELETION ========================================================================================
+    def get_id_by_email(self, user_key, mysql) -> int: # user_key = username/first part of email
+        """Returns the id of users with non-Butler emails
+
+        Args:
+            user_key (str): user email
+            mysql (connector): SQL connection
+
+        Returns:
+            str: id for a non-Butler user
+        """ 
+        cursor = mysql.cursor()
+
+        query = (f'''select id from wp_users where user_email like "{user_key}%"''')
+        cursor.execute(query)
+
+        results = cursor.fetchone()
+        # if results is None:
+        #     return -1
+        id = int(results[0]) 
+        
+        cursor.close()
+
+        return id
+  
 
     def reassign_user(self, user_id, new_id) -> None:
         """deletes user {user_id} and reassigns their posts to declared user {new_id}
@@ -74,7 +100,30 @@ class wp:
         """        
         subprocess.run(f"wp site delete {blog_id}", shell=True, capture_output=True)
 
-    
+
+# OUTSIDE_USERS LIST ============================================================================== 
+    def get_outside_users(self, outside_users, mysql) -> None:
+        """Gets the id, username, and registration date of blogs users with non-Butler emails.
+
+        Args:
+            outside_users (dict): empty dict that is to-be appended in this function
+            mysql (connector): SQL connection
+        """        
+        cursor = mysql.cursor()
+        
+        query = ('''select id, user_email, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
+                    from wp_users 
+                    where user_email not like "%@butler.edu"''') #strp time
+        cursor.execute(query)
+
+        for(id, user_email, user_registered) in cursor:
+            outside_users [id, user_registered] = user_email
+            # outside_users[int(id)] = {"registered": user_registered, "email": user_email.split('@')[0]}
+
+        cursor.close()
+
+
+# INACTIVE_DATA LIST ==============================================================================  
     def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
         """Finds the difference between the list of current users and all active users 
             (all_users.txt) on blogs.butler.edu
@@ -92,7 +141,8 @@ class wp:
 
         return difference
 
-    
+
+# SITE_USERS LIST =================================================================================  
     def get_site_users(self, site_id, mysql) -> List[str]: 
         """Gets the users for a specific site.
 
@@ -117,8 +167,9 @@ class wp:
         cursor.close()
 
         return users
-            
 
+          
+# ID_USERNAME LIST ================================================================================
     def get_id_username(self, id_username, mysql) -> None: 
         """Gets the id and username of blogs users with Butler emails.
 
@@ -136,7 +187,8 @@ class wp:
 
         cursor.close()
 
-    
+
+# USER_BLOGS LIST =================================================================================
     def get_user_blogs(self, user_blogs, mysql) -> None: 
         """Gets all the blog ids and blog paths.
 
@@ -155,52 +207,7 @@ class wp:
         cursor.close()
 
 
-    def get_outside_users(self, outside_users, mysql) -> None:
-        """Gets the id, username, and registration date of blogs users with non-Butler emails.
-
-        Args:
-            outside_users (dict): empty dict that is to-be appended in this function
-            mysql (connector): SQL connection
-        """        
-        cursor = mysql.cursor()
-        
-        query = ('''select id, user_email, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
-                    from wp_users 
-                    where user_email not like "%@butler.edu"''') #strp time
-        cursor.execute(query)
-
-        for(id, user_email, user_registered) in cursor:
-            outside_users [id, user_registered] = user_email
-            # outside_users[int(id)] = {"registered": user_registered, "email": user_email.split('@')[0]}
-
-        cursor.close()
-
-
-    def get_id_by_email(self, user_key, mysql) -> int: # user_key = username/first part of email
-        """Returns the id of users with non-Butler emails
-
-        Args:
-            user_key (str): user email
-            mysql (connector): SQL connection
-
-        Returns:
-            str: id for a non-Butler user
-        """ 
-        cursor = mysql.cursor()
-
-        query = (f'''select id from wp_users where user_email like "{user_key}%"''')
-        cursor.execute(query)
-
-        results = cursor.fetchone()
-        # if results is None:
-        #     return -1
-        id = int(results[0]) 
-        
-        cursor.close()
-
-        return id
-    
-
+# DATA ============================================================================================
     def get_user_sites(self,user_id:int,mysql) -> list[str]:
         """Returns a list of sites that a specific user is on
 
@@ -232,21 +239,22 @@ class wp:
         cursor.close()
 
         return site_ids, sites
-    
+
+
     def get_site_info(self,user_id:int,mysql) -> str:
-        """_summary_
+        """Returns the date a blog was registered and last updated as strings
 
         Args:
-            user_id (int): _description_
-            mysql (_type_): _description_
+            user_id (int): user_id (int): unique user id number
+            mysql (connector): SQL connection
 
         Returns:
-            list[str]: _description_
+            str: date (mm-yyyy) as a string and date of the blogs last update
         """            
         cursor = mysql.cursor()
         
         query = ('''select registered, last_updated from wp_blogs where blog_id = "%s"''')
-        # and meta_value like '%administrator'
+                    # and meta_value like '%administrator'
         cursor.execute(query, (user_id,))
 
         results = cursor.fetchall()
@@ -255,9 +263,7 @@ class wp:
 
         for r in results:
             reg_dates = str(r[0]).split(" ")[0] 
-            # year = int(reg_dates.split("-")[0]) 
-            year_month = str(reg_dates[:7]) 
-            # print(reg_dates[:7]) #.split("-")[1])          
+            year_month = str(reg_dates[:7])         
             updates = str(r[1]).split(" ")[0]
 
         cursor.close()
@@ -265,16 +271,15 @@ class wp:
         return year_month, updates
     
 
-    # select count(*) from wp_blogs where year(registered) = 2016;
-    def get_year_regs(self,year,mysql) -> str:
-        """_summary_
+    def get_year_regs(self,year,mysql) -> int:
+        """Returns the number of blogs created for a specific date (mm-yyyy)
 
         Args:
-            user_id (int): _description_
-            mysql (_type_): _description_
+            user_id (int): user_id (int): unique user id number
+            mysql (connector): SQL connection
 
         Returns:
-            list[str]: _description_
+            int: number of sites registered
         """            
         cursor = mysql.cursor()
         
