@@ -23,6 +23,7 @@ class wp:
         self.token = base64.b64encode(credentials.encode()).decode('utf-8')
 
 
+# DELETION ========================================================================================
     def create_user(self, username: str = "") -> dict:
         """adds a user to a blog
 
@@ -37,7 +38,6 @@ class wp:
             return response.json()
 
 
-# DELETION ========================================================================================
     def get_id_by_email(self, user_key, mysql) -> int: # user_key = username/first part of email
         """Returns the id of users with non-Butler emails
 
@@ -263,15 +263,15 @@ class wp:
 
         for r in results:
             reg_dates = str(r[0]).split(" ")[0] 
-            year_month = str(reg_dates[:7])         
+            year_month = (f"{reg_dates[:7]}%")         
             updates = str(r[1]).split(" ")[0]
 
         cursor.close()
 
-        return year_month, updates
+        return str(year_month), updates
     
 
-    def get_year_regs(self,year,mysql) -> int:
+    def get_year_regs(self,date,mysql) -> int:
         """Returns the number of blogs created for a specific date (mm-yyyy)
 
         Args:
@@ -283,9 +283,10 @@ class wp:
         """            
         cursor = mysql.cursor()
         
-        query = ('''select count(*) from wp_blogs where year(registered) = %s''')
+        query = ('''select distinct count(*) from wp_blogs where date(registered) like %s''')
+        # select count(*) from wp_blogs where date(registered) like
         # and meta_value like '%administrator'
-        cursor.execute(query, (year,))
+        cursor.execute(query, (date,))
 
         results = cursor.fetchall()
         sites = 0
