@@ -101,6 +101,11 @@ class wp:
         subprocess.run(f"wp site delete {blog_id}", shell=True, capture_output=True)
 
 
+# DELETION ========================================================================================
+    def remove_role(self, user_email, blog_path) -> None:
+        subprocess.run(f"wp user remove-role {user_email} administrator --url=https://blogs-dev.butler.edu{blog_path}", shell=True, capture_output=True)
+
+
 # OUTSIDE_USERS LIST ============================================================================== 
     def get_outside_users(self, outside_users, mysql) -> None:
         """Gets the id, username, and registration date of blogs users with non-Butler emails.
@@ -241,11 +246,11 @@ class wp:
         return site_ids, sites
 
 
-    def get_site_info(self,user_id:int,mysql) -> str:
+    def get_site_info(self,blog_id:int,mysql) -> str:
         """Returns the date a blog was registered and last updated as strings
 
         Args:
-            user_id (int): user_id (int): unique user id number
+            blog_id (int): unique site id number
             mysql (connector): SQL connection
 
         Returns:
@@ -253,9 +258,9 @@ class wp:
         """            
         cursor = mysql.cursor()
         
-        query = ('''select registered, last_updated from wp_blogs where blog_id = "%s"''')
+        query = ('''select registered, last_updated from wp_blogs where blog_id = %s''')
                     # and meta_value like '%administrator'
-        cursor.execute(query, (user_id,))
+        cursor.execute(query, (blog_id,))
 
         results = cursor.fetchall()
         reg_dates = ""
@@ -271,7 +276,34 @@ class wp:
         return str(year_month), updates
     
 
-    def get_year_regs(self,date,mysql) -> int:
+    def get_user_info(self,user_id:int,mysql) -> str:
+        """Returns the date a blog was registered and last updated as strings
+
+        Args:
+            user_id (int): user_id (int): unique user id number
+            mysql (connector): SQL connection
+
+        Returns:
+            str: date (mm-yyyy) as a string and date of the blogs last update
+        """            
+        cursor = mysql.cursor()
+        
+        query = ('''select user_registered from wp_users where ID = %s''')
+        cursor.execute(query, (user_id,))
+
+        results = cursor.fetchall()
+        reg_dates = ""
+
+        for r in results:
+            reg_dates = str(r[0]).split(" ")[0] 
+            year_month = (f"{reg_dates[:7]}%")
+
+        cursor.close()
+
+        return str(year_month)
+    
+
+    def get_blogs_regs(self,date,mysql) -> int:
         """Returns the number of blogs created for a specific date (mm-yyyy)
 
         Args:
@@ -284,6 +316,24 @@ class wp:
         cursor = mysql.cursor()
         
         query = ('''select distinct count(*) from wp_blogs where date(registered) like %s''')
+        # select count(*) from wp_blogs where date(registered) like
+        # and meta_value like '%administrator'
+        cursor.execute(query, (date,))
+
+        results = cursor.fetchall()
+        sites = 0
+
+        for r in results:
+            sites = int(r[0])
+
+        cursor.close()
+
+        return sites
+    
+    def get_user_regs(self,date,mysql) -> int:         
+        cursor = mysql.cursor()
+        
+        query = ('''select distinct count(*) from wp_users where date(user_registered) like %s''')
         # select count(*) from wp_blogs where date(registered) like
         # and meta_value like '%administrator'
         cursor.execute(query, (date,))

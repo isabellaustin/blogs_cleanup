@@ -29,6 +29,7 @@ sites_tbd = {}
 users_tbd = {}
 other_users_tbd = {}
 yearly_reg = {}
+yearly_user_reg = {}
 #==========================================
 
 def main(blogs) -> None:
@@ -106,13 +107,16 @@ def main(blogs) -> None:
     username_list = list(id_username.values())
 
     #==========================================
-    fetch_multisite_users(id_username)
-    user_csv(username_list,id_list,user_blogs)
-    site_csv(username_list,id_list,user_blogs)
-    remove_multisite_admins()
+    # fetch_multisite_users(id_username)
+    # user_sitedata_csv(username_list,id_list,user_blogs)
+    # userdata_csv(username_list, id_list)
+    # remove_multisite_admins()
+    # sitestats_csv(username_list)
+    sitedata_csv(username_list,id_list,user_blogs)
+    
 
-    blog_deletion()
-    user_deletion(outside_users)
+    # blog_deletion()
+    # user_deletion(outside_users)
 
     cnx.close()
 
@@ -210,7 +214,7 @@ def fetch_multisite_users(id_username) -> None:
                 writer.writerow(data)
 
 
-def user_csv(username_list, id_list, user_blogs) -> None:
+def user_sitedata_csv(username_list, id_list, user_blogs) -> None:
     """Lists the site_id and slug for each site a user is on
 
     Args:
@@ -220,7 +224,7 @@ def user_csv(username_list, id_list, user_blogs) -> None:
     """    
     
     header = ["user_id", "user_email", "site_id", "slug"] 
-    with open('userdata.csv', 'w', encoding='UTF8') as f:
+    with open('user_sitedata.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
 
@@ -240,14 +244,46 @@ def user_csv(username_list, id_list, user_blogs) -> None:
                 data = [f'{id}', f'{user}', f'{blog_id}', f'{path}']
                 writer.writerow(data)
 
-    # sitestats.csv
+
+def userdata_csv(username_list, id_list) -> None:
+    header = ["user_id", "user_email", "user_registered"] 
+    with open('userdata.csv', 'w', encoding='UTF8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+
+        print("Fetching user stats...")
+        for user in username_list:
+            index = username_list.index(f"{user}")
+            id = id_list[index] #user_id
+
+            user_reg_date = blogs.get_user_info(id,cnx)
+
+            if user_reg_date not in dates:
+                    dates.append(user_reg_date) 
+                    regs = blogs.get_user_regs(user_reg_date,cnx)
+                    # print(year, regs)
+                    yearly_user_reg[user_reg_date] = regs
+
+            data = [f'{id}', f'{user}', f'{user_reg_date}']
+            writer.writerow(data)
+    
+    date_list = list(yearly_user_reg.keys())
+    ordered_dates = sorted(date_list)
+    new_dates = [x[:-1] for x in ordered_dates]
+
+    yearly_user_reg(yearly_user_reg, new_dates)
+
+
+def sitestats_csv(username_list) -> None:
     sites_count = collections.Counter()
     header = ['user_email', 'num_of_sites'] 
     with open('sitestats.csv', 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        with open('userdata.csv') as input_file:
-            for user in username_list:
+        with open('user_sitedata.csv') as input_file:
+
+            print("Fetching site stats...")
+            for user in tqdm(username_list):
                 for row in csv.reader(input_file, delimiter=','):
                     sites_count[row[1]] += 1
 
@@ -256,7 +292,7 @@ def user_csv(username_list, id_list, user_blogs) -> None:
                 writer.writerow(data)
 
 
-def site_csv(username_list, id_list, user_blogs) -> None:
+def sitedata_csv(username_list, id_list, user_blogs) -> None:
     """Gets blog_id, slug, registered, and last_updated for every site
 
     Args:
@@ -291,7 +327,7 @@ def site_csv(username_list, id_list, user_blogs) -> None:
                 
                 if year_month not in dates:
                     dates.append(year_month) 
-                    regs = blogs.get_year_regs(year_month,cnx)
+                    regs = blogs.get_blogs_regs(year_month,cnx)
                     # print(year, regs)
                     yearly_reg[year_month] = regs
 
@@ -302,6 +338,13 @@ def site_csv(username_list, id_list, user_blogs) -> None:
     ordered_dates = sorted(date_list)
     new_dates = [x[:-1] for x in ordered_dates] #remove the '%' from the x-axis values
 
+    # make graphs one-at-a-time
+    # yearly_blog_reg(yearly_reg, new_dates)
+    quarterly_blog_reg(yearly_reg, new_dates)
+
+
+def yearly_blog_reg(yearly_reg, new_dates) -> None:
+    # creates cumulative reg values
     sums = []
     total = 0
     for r in list(yearly_reg.values()):
@@ -309,27 +352,27 @@ def site_csv(username_list, id_list, user_blogs) -> None:
         sums.append(total)
     log_sum = [(i//10) for i in sums]
 
-    # YEARLY_REG
-    # plt.rcParams["figure.figsize"] = [23.50, 15.50]
-    # plt.rcParams["figure.autolayout"] = True
+    plt.rcParams["figure.figsize"] = [23.50, 15.50]
+    plt.rcParams["figure.autolayout"] = True
     
-    # plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
-    # plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
-    # plt.xticks(rotation = 90)
-    # plt.yticks(np.arange(min(yearly_reg.values()), max(sums), 50))
+    plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+    plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+    plt.xticks(rotation = 90)
+    plt.yticks(np.arange(min(yearly_reg.values()), max(sums), 50))
 
-    # plt.title("Blog Registration by Date")
-    # plt.xlabel("Date (yyyy-mm)")
-    # plt.ylabel("Number of Blogs Registered")
-    # plt.margins(x=0.01, y=0.01)
+    plt.title("Blog Registration by Date")
+    plt.xlabel("Date (yyyy-mm)")
+    plt.ylabel("Number of Blogs Registered")
+    plt.margins(x=0.01, y=0.01)
 
-    # plt.legend(prop={'size': 15},borderpad=2)
-    # # plt.legend(loc="upper left")
+    plt.legend(prop={'size': 15},borderpad=2)
+    # plt.legend(loc="upper left")
 
-    # plt.show(block=True)
-    # plt.savefig('yearly_reg.png')
-        
-    # QUARTERLY_REG 
+    plt.show(block=True)
+    plt.savefig('yearly_blog_reg.png')
+
+
+def quarterly_blog_reg(yearly_reg, new_dates) -> None:
     q_key = (new_dates[:-1])
     quarterly_keys = []
     for i in range(0,len(q_key),4):
@@ -347,56 +390,78 @@ def site_csv(username_list, id_list, user_blogs) -> None:
     quarters = [str(x) for x in list((df['quarter']))] #need to convert PeriodIndex to string
     # print(df)
     
-    # plt.rcParams["figure.figsize"] = [10.50, 7.50]
-    # plt.rcParams["figure.autolayout"] = True
+    plt.rcParams["figure.figsize"] = [10.50, 7.50]
+    plt.rcParams["figure.autolayout"] = True
 
-    # plt.plot(quarters, df['registrations'])
-    # plt.xticks(rotation = 90)
-    # plt.yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
+    plt.plot(quarters, df['registrations'])
+    plt.xticks(rotation = 90)
+    plt.yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
 
-    # plt.title("Quarterly Blog Registrations")
-    # plt.xlabel("Quarter")
-    # plt.ylabel("Number of Blogs Registered")
-    # plt.margins(x=0.01, y=0.01)
+    plt.title("Quarterly Blog Registrations")
+    plt.xlabel("Quarter")
+    plt.ylabel("Number of Blogs Registered")
+    plt.margins(x=0.01, y=0.01)
 
-    # plt.show(block=True)
-    # plt.savefig('quarterly_reg.png')
+    plt.show(block=True)
+    plt.savefig('quarterly_blog_reg.png')
+
+
+def yearly_user_reg(yearly_reg, new_dates) -> None:
+    # creates cumulative reg values
+    sums = []
+    total = 0
+    for r in list(yearly_reg.values()):
+        total += r
+        sums.append(total)
+    log_sum = [(i//10) for i in sums]
+
+    plt.rcParams["figure.figsize"] = [23.50, 15.50]
+    plt.rcParams["figure.autolayout"] = True
+    
+    plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+    plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+    plt.xticks(rotation = 90)
+    plt.yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
+
+    plt.title("User Registration by Date")
+    plt.xlabel("Date (yyyy-mm)")
+    plt.ylabel("Number of Users Registered")
+    plt.margins(x=0.01, y=0.01)
+
+    plt.legend(prop={'size': 15},borderpad=2)
+    # plt.legend(loc="upper left")
+
+    plt.show(block=True)
+    plt.savefig('yearly_user_reg.png')
 
 
 def remove_multisite_admins() -> None:
     multisite_user = []
-    multisite_site = []
-    user_sites = {}
-    sites = []
     user_indices = {}
-    index = []
-    indices_count = collections.Counter()
+    # indices_count = collections.Counter()
     
     with open('multisite_users.csv') as f:
         for row in csv.reader(f, delimiter=','):
             multisite_user.append(row[0])
+            user_indices[row[0]] = []
 
-    with open('userdata.csv') as input_file:
-        sites.clear()
+    with open('user_sitedata.csv') as input_file:
         for row in csv.reader(input_file, delimiter=','):
-            # sites.clear()
-            # sites = []
-            for user in multisite_user[1:]:
-                if user == row[1]:
-                    indices_count[user] += 1
-                    sites.append(int(row[2]))
-                    user_indices[int(row[2])] = row[1]
-           
-        # print(indices_count.keys())
-        # print(indices_count.values())
-        print(user_indices)
 
-        blog_ids = list(user_indices.keys()) #blog_ids
-        user_emails = list(user_indices.values()) #user_emails
-        # for id in blog_ids:
-        #     if id != 1:
-                # delete user_email from id
-        #admin blog_id: 1
+            if row[1] in user_indices.keys():
+                user_indices[row[1]].append(row[3])
+            # else:
+            #     data[row[1]] = [row[3]]
+               
+        # for k,v in user_indices.items():
+        #     print(f"{k}:{len(v)}")
+
+        user_emails = list(user_indices.keys())
+        blog_paths = list(user_indices.values())
+        for email in user_emails:
+            for path in blog_paths:
+                blogs.remove_role(email,path)
+
 
 
 # STATISTICS ======================================================================================

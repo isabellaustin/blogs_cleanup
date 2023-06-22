@@ -8,8 +8,11 @@ all_users.txt
 blogs_users.txt
 delete_users.txt
 outside_users.txt
-sitestats.csv
 multisite_users.csv
-userdata.csv
 user_sitedata.csv
+userdata.csv
 sitedata.csv
+sitestats.csv
+# yearly_blog_reg.png
+# quarterly_blog_reg.png
+# yearly_user_reg.png
