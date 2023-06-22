@@ -2,6 +2,12 @@ import requests
 import subprocess
 import base64
 from typing import List
+from colorama import Fore, Back
+
+import csv
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
 
 class wp:
 # INITALIZATION ===================================================================================
@@ -330,6 +336,7 @@ class wp:
 
         return sites
     
+
     def get_user_regs(self,date,mysql) -> int:         
         cursor = mysql.cursor()
         
@@ -347,3 +354,121 @@ class wp:
         cursor.close()
 
         return sites
+
+# ====================
+    def yearly_blog_reg(yearly_reg, new_dates) -> None:
+        # creates cumulative reg values
+        sums = []
+        total = 0
+        for r in list(yearly_reg.values()):
+            total += r
+            sums.append(total)
+        log_sum = [(i//10) for i in sums]
+
+        plt.rcParams["figure.figsize"] = [23.50, 15.50]
+        plt.rcParams["figure.autolayout"] = True
+        
+        plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+        plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+        plt.xticks(rotation = 90)
+        plt.yticks(np.arange(min(yearly_reg.values()), max(sums), 50))
+
+        plt.title("Blog Registration by Date")
+        plt.xlabel("Date (yyyy-mm)")
+        plt.ylabel("Number of Blogs Registered")
+        plt.margins(x=0.01, y=0.01)
+
+        plt.legend(prop={'size': 15},borderpad=2)
+        # plt.legend(loc="upper left")
+
+        plt.show(block=True)
+        plt.savefig('yearly_blog_reg.png')
+
+
+    def quarterly_blog_reg(yearly_reg, new_dates) -> None:
+        q_key = (new_dates[:-1])
+        quarterly_keys = []
+        for i in range(0,len(q_key),4):
+            qik = q_key[i]
+            quarterly_keys.append(qik)
+
+        q_val = (list(yearly_reg.values())[:-1])
+        quarterly_values = []
+        for i in range(0,len(q_val),4):
+            qiv = sum(q_val[i:(i+3)])
+            quarterly_values.append(qiv)
+        
+        df = pd.DataFrame({'date': quarterly_keys,'registrations': quarterly_values})
+        df['quarter'] = pd.PeriodIndex(df['date'], freq='Q')
+        quarters = [str(x) for x in list((df['quarter']))] #need to convert PeriodIndex to string
+        # print(df)
+        
+        plt.rcParams["figure.figsize"] = [10.50, 7.50]
+        plt.rcParams["figure.autolayout"] = True
+
+        plt.plot(quarters, df['registrations'])
+        plt.xticks(rotation = 90)
+        plt.yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
+
+        plt.title("Quarterly Blog Registrations")
+        plt.xlabel("Quarter")
+        plt.ylabel("Number of Blogs Registered")
+        plt.margins(x=0.01, y=0.01)
+
+        plt.show(block=True)
+        plt.savefig('quarterly_blog_reg.png')
+
+
+    def yearly_user_reg(yearly_reg, new_dates) -> None:
+        # creates cumulative reg values
+        sums = []
+        total = 0
+        for r in list(yearly_reg.values()):
+            total += r
+            sums.append(total)
+        log_sum = [(i//10) for i in sums]
+
+        plt.rcParams["figure.figsize"] = [23.50, 15.50]
+        plt.rcParams["figure.autolayout"] = True
+        
+        plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+        plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+        plt.xticks(rotation = 90)
+        plt.yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
+
+        plt.title("User Registration by Date")
+        plt.xlabel("Date (yyyy-mm)")
+        plt.ylabel("Number of Users Registered")
+        plt.margins(x=0.01, y=0.01)
+
+        plt.legend(prop={'size': 15},borderpad=2)
+        # plt.legend(loc="upper left")
+
+        plt.show(block=True)
+        plt.savefig('yearly_user_reg.png')
+
+
+    def remove_multisite_admins() -> None:
+        multisite_user = []
+        user_indices = {}
+        # indices_count = collections.Counter()
+        
+        with open('multisite_users.csv') as f:
+            for row in csv.reader(f, delimiter=','):
+                multisite_user.append(row[0])
+                user_indices[row[0]] = []
+
+        with open('user_sitedata.csv') as input_file:
+            for row in csv.reader(input_file, delimiter=','):
+
+                if row[1] in user_indices.keys():
+                    user_indices[row[1]].append(row[3])
+
+            user_emails = list(user_indices.keys())
+            for email in user_emails:
+                blog_paths = list(user_indices[email])
+                for path in blog_paths:
+                    # what if it is there own site? (ex. bquincy@butler.edu is admin on /bquincy/)
+
+                    # wp.remove_role(email,path)
+                    print(f"{Fore.WHITE}{Back.RED} ADMIN {email} was removed from {path}.{Back.RESET}{Fore.RESET}")

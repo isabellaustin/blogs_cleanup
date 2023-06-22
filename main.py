@@ -9,17 +9,12 @@ from tqdm.auto import tqdm
 import logging
 import csv
 import collections
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 
 """stat variables"""
-all_kept_users = []
 all_kept_users_unique = []
-all_del_users = []
 all_del_users_unique = []
-all_other_del = []
 all_other_del_unique = []
+
 dates = []
 nomads = [] #list of users without any sites
 key = []
@@ -28,8 +23,13 @@ key = []
 sites_tbd = {}
 users_tbd = {}
 other_users_tbd = {}
+
 yearly_reg = {}
 yearly_user_reg = {}
+
+# all_kept_users = []
+# all_del_users = []
+# all_other_del = []
 #==========================================
 
 def main(blogs) -> None:
@@ -59,68 +59,67 @@ def main(blogs) -> None:
     blogs.get_user_blogs(user_blogs, cnx)
     sites = list(user_blogs.keys()) #gets site id
 
-    # for site in sites:
-    #     """gets the list of users on a site"""        
-    #     site_users = blogs.get_site_users(site, cnx)
-    #     remaining_users = len(site_users)
-    #     site_path = user_blogs[site]
+    for site in sites:
+        """gets the list of users on a site"""        
+        site_users = blogs.get_site_users(site, cnx)
+        remaining_users = len(site_users)
+        site_path = user_blogs[site]
          
-    #     for u in site_users: 
-    #         username = id_username[u] # key: id, value: username
+        for u in site_users: 
+            username = id_username[u] # key: id, value: username
 
-    #         if username in inactive_data: #if user is inactive
-    #             print(f"{Fore.RED}{username} will be removed from {site_path}{Fore.RESET}")
+            if username in inactive_data: #if user is inactive
+                print(f"{Fore.RED}{username} will be removed from {site_path}{Fore.RESET}")
 
-    #             remaining_users-=1
+                remaining_users-=1
 
-    #             if username in outside_data: #non-BU deleted
-    #                 other_users_tbd[username] = u # key: username, value: id
+                if username in outside_data: #non-BU deleted
+                    other_users_tbd[username] = u # key: username, value: id
 
-    #                 all_other_del.append(username)
-    #                 if username not in all_other_del_unique: 
-    #                     all_other_del_unique.append(username)
-    #             else:                       #BU deleted
-    #                 users_tbd[username] = u # key: username, value: id
+                    # all_other_del.append(username)
+                    if username not in all_other_del_unique: 
+                        all_other_del_unique.append(username)
+                else:                       #BU deleted
+                    users_tbd[username] = u # key: username, value: id
 
-    #                 all_del_users.append(username)
-    #                 if username not in all_del_users_unique: 
-    #                     all_del_users_unique.append(username) 
-    #         else:
-    #             print(f"{Fore.GREEN}{username} will not be removed from {site_path}{Fore.RESET}")
+                    # all_del_users.append(username)
+                    if username not in all_del_users_unique: 
+                        all_del_users_unique.append(username) 
+            else:
+                print(f"{Fore.GREEN}{username} will not be removed from {site_path}{Fore.RESET}")
 
-    #             all_kept_users.append(username)
-    #             if username not in all_kept_users_unique: 
-    #                 all_kept_users_unique.append(username)
+                # all_kept_users.append(username)
+                if username not in all_kept_users_unique: 
+                    all_kept_users_unique.append(username)
 
-    #     if remaining_users == 0:
-    #         print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Back.RESET}")
+        if remaining_users == 0:
+            print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Back.RESET}")
 
-    #         all_del_sites+=1
-    #         sites_tbd[site_path] = site # key: path, value: id
-    #     else:
-    #         all_kept_sites+=1
+            all_del_sites+=1
+            sites_tbd[site_path] = site # key: path, value: id
+        else:
+            all_kept_sites+=1
 
-    #     index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
-    #     print(f"SITE {index_num} OF {len(sites)}")
+        index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
+        print(f"SITE {index_num} OF {len(sites)}")
 
     id_list = list(id_username.keys())
     username_list = list(id_username.values())
 
-    #==========================================
-    # fetch_multisite_users(id_username)
+    # ===================================================
+    # fetch_multisite_users(username_list,id_list)
+    # wp.remove_multisite_admins()
+
     # user_sitedata_csv(username_list,id_list,user_blogs)
     # userdata_csv(username_list, id_list)
-    # remove_multisite_admins()
-    # sitestats_csv(username_list)
-    sitedata_csv(username_list,id_list,user_blogs)
-    
+    # sitestats_csv(username_list,outside_users)
+    # sitedata_csv(username_list,id_list,user_blogs)
 
-    # blog_deletion()
-    # user_deletion(outside_users)
+    blog_deletion()
+    user_deletion(outside_users)
 
     cnx.close()
-
-    # get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
+    get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
 
 
 # DELETION ========================================================================================
@@ -168,7 +167,7 @@ def user_deletion(outside_users) -> None:
             # delete_user(id)
             # outside_users.pop(username)
                 
-            all_other_del.append(ou)
+            # all_other_del.append(ou)
             if ou not in all_other_del_unique: 
                 all_other_del_unique.append(ou)
 
@@ -176,7 +175,7 @@ def user_deletion(outside_users) -> None:
             id = users_tbd[u]
 
             # delete_user(id)
-            other_users_tbd.pop(ou)
+            # other_users_tbd.pop(ou)
 
         print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {ou} was deleted from the database.{Back.RESET}{Fore.RESET}")
 
@@ -188,7 +187,7 @@ def user_deletion(outside_users) -> None:
 
 
 # DATA ============================================================================================
-def fetch_multisite_users(id_username) -> None:  
+def fetch_multisite_users(username_list,id_list,) -> None:  
     """Gets the email for users that are on 15 or more sites and the amount of sites they're on
 
     Args:
@@ -201,14 +200,11 @@ def fetch_multisite_users(id_username) -> None:
         writer.writerow(header)
 
         print("Fetching multisite users...")
-        id_list = list(id_username.keys())
-        username_list = list(id_username.values())
         for user in tqdm(list(all_kept_users_unique)):
             index = username_list.index(f"{user}")
             id = id_list[index]
 
             user_site_ids, user_sites = blogs.get_user_sites(id,cnx)
-            
             if len(user_sites) >= 15:
                 data = [f'{user}', f'{len(user_sites)}']
                 writer.writerow(data)
@@ -251,7 +247,7 @@ def userdata_csv(username_list, id_list) -> None:
         writer = csv.writer(f)
         writer.writerow(header)
 
-        print("Fetching user stats...")
+        print("Fetching user information...")
         for user in username_list:
             index = username_list.index(f"{user}")
             id = id_list[index] #user_id
@@ -271,10 +267,19 @@ def userdata_csv(username_list, id_list) -> None:
     ordered_dates = sorted(date_list)
     new_dates = [x[:-1] for x in ordered_dates]
 
-    yearly_user_reg(yearly_user_reg, new_dates)
+    # wp.yearly_user_reg(yearly_user_reg, new_dates)
 
 
-def sitestats_csv(username_list) -> None:
+def sitestats_csv(username_list,outside_users) -> None:
+    # print("Fetching siteless users...")
+    # outside_values = list(outside_users.values())
+    # for ou in tqdm(outside_values):
+    #     id = blogs.get_id_by_email(ou, cnx)
+    #     user_sites = blogs.get_user_sites(id,cnx)
+        
+    #     if len(user_sites) == 0:
+    #         nomads.append(ou)
+
     sites_count = collections.Counter()
     header = ['user_email', 'num_of_sites'] 
     with open('sitestats.csv', 'w', encoding='UTF8') as f:
@@ -306,7 +311,7 @@ def sitedata_csv(username_list, id_list, user_blogs) -> None:
         writer = csv.writer(f)
         writer.writerow(header)
         
-        print("Fetching site details...")
+        print("Fetching site information...")
         for user in tqdm(username_list):
             index = username_list.index(f"{user}")
             user_id = id_list[index]
@@ -339,129 +344,8 @@ def sitedata_csv(username_list, id_list, user_blogs) -> None:
     new_dates = [x[:-1] for x in ordered_dates] #remove the '%' from the x-axis values
 
     # make graphs one-at-a-time
-    # yearly_blog_reg(yearly_reg, new_dates)
-    quarterly_blog_reg(yearly_reg, new_dates)
-
-
-def yearly_blog_reg(yearly_reg, new_dates) -> None:
-    # creates cumulative reg values
-    sums = []
-    total = 0
-    for r in list(yearly_reg.values()):
-        total += r
-        sums.append(total)
-    log_sum = [(i//10) for i in sums]
-
-    plt.rcParams["figure.figsize"] = [23.50, 15.50]
-    plt.rcParams["figure.autolayout"] = True
-    
-    plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
-    plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
-    plt.xticks(rotation = 90)
-    plt.yticks(np.arange(min(yearly_reg.values()), max(sums), 50))
-
-    plt.title("Blog Registration by Date")
-    plt.xlabel("Date (yyyy-mm)")
-    plt.ylabel("Number of Blogs Registered")
-    plt.margins(x=0.01, y=0.01)
-
-    plt.legend(prop={'size': 15},borderpad=2)
-    # plt.legend(loc="upper left")
-
-    plt.show(block=True)
-    plt.savefig('yearly_blog_reg.png')
-
-
-def quarterly_blog_reg(yearly_reg, new_dates) -> None:
-    q_key = (new_dates[:-1])
-    quarterly_keys = []
-    for i in range(0,len(q_key),4):
-        qik = q_key[i]
-        quarterly_keys.append(qik)
-
-    q_val = (list(yearly_reg.values())[:-1])
-    quarterly_values = []
-    for i in range(0,len(q_val),4):
-        qiv = sum(q_val[i:(i+3)])
-        quarterly_values.append(qiv)
-    
-    df = pd.DataFrame({'date': quarterly_keys,'registrations': quarterly_values})
-    df['quarter'] = pd.PeriodIndex(df['date'], freq='Q')
-    quarters = [str(x) for x in list((df['quarter']))] #need to convert PeriodIndex to string
-    # print(df)
-    
-    plt.rcParams["figure.figsize"] = [10.50, 7.50]
-    plt.rcParams["figure.autolayout"] = True
-
-    plt.plot(quarters, df['registrations'])
-    plt.xticks(rotation = 90)
-    plt.yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
-
-    plt.title("Quarterly Blog Registrations")
-    plt.xlabel("Quarter")
-    plt.ylabel("Number of Blogs Registered")
-    plt.margins(x=0.01, y=0.01)
-
-    plt.show(block=True)
-    plt.savefig('quarterly_blog_reg.png')
-
-
-def yearly_user_reg(yearly_reg, new_dates) -> None:
-    # creates cumulative reg values
-    sums = []
-    total = 0
-    for r in list(yearly_reg.values()):
-        total += r
-        sums.append(total)
-    log_sum = [(i//10) for i in sums]
-
-    plt.rcParams["figure.figsize"] = [23.50, 15.50]
-    plt.rcParams["figure.autolayout"] = True
-    
-    plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
-    plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
-    plt.xticks(rotation = 90)
-    plt.yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
-
-    plt.title("User Registration by Date")
-    plt.xlabel("Date (yyyy-mm)")
-    plt.ylabel("Number of Users Registered")
-    plt.margins(x=0.01, y=0.01)
-
-    plt.legend(prop={'size': 15},borderpad=2)
-    # plt.legend(loc="upper left")
-
-    plt.show(block=True)
-    plt.savefig('yearly_user_reg.png')
-
-
-def remove_multisite_admins() -> None:
-    multisite_user = []
-    user_indices = {}
-    # indices_count = collections.Counter()
-    
-    with open('multisite_users.csv') as f:
-        for row in csv.reader(f, delimiter=','):
-            multisite_user.append(row[0])
-            user_indices[row[0]] = []
-
-    with open('user_sitedata.csv') as input_file:
-        for row in csv.reader(input_file, delimiter=','):
-
-            if row[1] in user_indices.keys():
-                user_indices[row[1]].append(row[3])
-            # else:
-            #     data[row[1]] = [row[3]]
-               
-        # for k,v in user_indices.items():
-        #     print(f"{k}:{len(v)}")
-
-        user_emails = list(user_indices.keys())
-        blog_paths = list(user_indices.values())
-        for email in user_emails:
-            for path in blog_paths:
-                blogs.remove_role(email,path)
-
+    # wp.yearly_blog_reg(yearly_reg, new_dates)
+    # wp.quarterly_blog_reg(yearly_reg, new_dates)
 
 
 # STATISTICS ======================================================================================
@@ -478,7 +362,7 @@ def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> N
 
  
     logger.info(f"Number of Butler users on the network: {total_bu_users} ({len(all_del_users_unique)} inactive, {len(all_kept_users_unique)} active)")
-    logger.info(f"Number of non-Butler users on the network: {len(outside)} ({len(nomads)} siteless)\n")
+    logger.info(f"Number of non-Butler users on the network: {len(outside)}\n") # ({len(nomads)} siteless)
 
     # CLEANUP
     logger.info(f"Number of archived sites: {del_sites}")
