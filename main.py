@@ -107,6 +107,9 @@ def main(blogs) -> None:
     username_list = list(id_username.values())
 
     # ===================================================
+    # blog_deletion()
+    # user_deletion(outside_users)
+    
     # fetch_multisite_users(username_list,id_list)
     # wp.remove_multisite_admins()
 
@@ -116,9 +119,6 @@ def main(blogs) -> None:
     sitedata_csv(username_list,id_list,user_blogs)
     plugins_csv()
     # themes_csv()
-
-    # blog_deletion()
-    # user_deletion(outside_users)
 
     cnx.close()
     # get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
@@ -359,13 +359,22 @@ def plugins_csv() -> None:
     site_plugins = {} 
     plugin_count = collections.Counter()
     unique_plugins = []
+    inactive = []
+
+    all_plugins = open("plugins.txt").read().splitlines()
+
+    activations1 = []
+    activations2 = []
+    activations3 = []
+    activations4 = []
+    activations5 = []
 
     with open('sitedata.csv') as f:
         for row in csv.reader(f, delimiter=','):
             sites[row[1]] = (row[0])
             site_plugins[row[1]] = []
 
-    headerS = ["plugin", "plugin_instances"]
+    headerS = ["plugin", "plugin_activations"]
     with open('pluginstats.csv', 'w', encoding='UTF8') as input_file: 
         writer = csv.writer(input_file)
         writer.writerow(headerS)
@@ -389,10 +398,26 @@ def plugins_csv() -> None:
             dataS = [f'{plug}', f'{plugin_count[plug]}']
             writer.writerow(dataS)
 
-    with open('sitedata.csv') as f:
-        for row in csv.reader(f, delimiter=','):
-            sites[row[1]] = (row[0])
-            site_plugins[row[1]] = []
+            try:
+                p = plug.split("/")[0]
+                all_plugins.remove(p)
+            except ValueError as ve:
+                inactive = all_plugins
+        
+    header = ["inactive_plugin"]
+    with open('inactive_plugins.csv', 'w', encoding='UTF8') as input_file: 
+        writer = csv.writer(input_file)
+        writer.writerow(header)
+                
+        print("Fetching inactive plugins...")
+        for i in inactive:
+            data = [f'{i}']
+            writer.writerow(data)
+
+    # with open('sitedata.csv') as f:
+    #     for row in csv.reader(f, delimiter=','):
+    #         sites[row[1]] = (row[0])
+    #         site_plugins[row[1]] = []
 
     headerD = ["site_id", "slug", "plugin_count", "plugins"]
     with open('plugindata.csv', 'w', encoding='UTF8') as input_file: 
@@ -424,7 +449,7 @@ def themes_csv() -> None:
             sites[row[1]] = (row[0])
             site_themes[row[1]] = []
 
-    headerS = ["theme", "theme_instances"]
+    headerS = ["theme", "theme_activations"]
     with open('themestats.csv', 'w', encoding='UTF8') as input_file: 
         writer = csv.writer(input_file)
         writer.writerow(headerS)

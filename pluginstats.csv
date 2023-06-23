@@ -1,4 +1,4 @@
-plugin,plugin_instances
+plugin,plugin_activations
 compositepost/CompositePost.php,512
 math-comment-spam-protection/math-comment-spam-protection.php,5691
 resize-on-upload/resize-on-upload.php,6224

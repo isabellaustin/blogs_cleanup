@@ -9,16 +9,18 @@ all_users.txt
 blogs_users.txt
 delete_users.txt
 outside_users.txt
+plugins.txt
 
 multisite_users.csv
 user_sitedata.csv
 userdata.csv
 sitedata.csv
 sitestats.csv
-# pluginstats.csv
+pluginstats.csv
 plugindata.csv
-# themestats.csv
+themestats.csv
 themedata.csv
+inactive_plugins.csv
 
 yearly_blog_reg.png
 quarterly_blog_reg.png

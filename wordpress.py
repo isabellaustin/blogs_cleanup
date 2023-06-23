@@ -491,6 +491,35 @@ class wp:
         plt.savefig('yearly_user_reg.png')
 
 
+    # def plugin_activations(yearly_reg, new_dates) -> None:
+    #     # creates cumulative reg values
+    #     sums = []
+    #     total = 0
+    #     for r in list(yearly_reg.values()):
+    #         total += r
+    #         sums.append(total)
+    #     log_sum = [(i//10) for i in sums]
+
+    #     plt.rcParams["figure.figsize"] = [23.50, 15.50]
+    #     plt.rcParams["figure.autolayout"] = True
+        
+    #     plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+    #     plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+    #     plt.xticks(rotation = 90)
+    #     plt.yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
+
+    #     plt.title("User Registration by Date")
+    #     plt.xlabel("Date (yyyy-mm)")
+    #     plt.ylabel("Number of Users Registered")
+    #     plt.margins(x=0.01, y=0.01)
+
+    #     plt.legend(prop={'size': 15},borderpad=2)
+    #     # plt.legend(loc="upper left")
+
+    #     plt.show(block=True)
+    #     plt.savefig('yearly_user_reg.png')
+
+
     def remove_multisite_admins() -> None:
         multisite_user = []
         user_indices = {}
@@ -515,3 +544,25 @@ class wp:
 
                     # wp.remove_role(email,path)
                     print(f"{Fore.WHITE}{Back.RED} ADMIN {email} was removed from {path}.{Back.RESET}{Fore.RESET}")
+
+
+    # def all_plugins(self) -> None:
+    #     """delete a blog
+
+    #     Args:
+    #         blog_id (int): unique id number
+    #     """  
+    #     encoding = 'ascii'      
+    #     p = subprocess.run("wp plugin list --path=/var/www/html", shell=True, capture_output=True)
+    #     # print(p.stdout)
+    #     with open('all_plugs.csv', 'w', encoding='UTF8') as input_file: 
+    #         # for row in csv.reader(input_file, delimiter="\'"):
+    #             writer = csv.writer(input_file)
+    #             writer.writerow(p.decode())
+    #             # print(p.stdout)
+
+    #     output = p.communicate()[0].decode(encoding)
+    #     edits = csv.reader(output.splitlines(), delimiter="\ ")
+    #     for row in edits:
+    #         print(row)
+
