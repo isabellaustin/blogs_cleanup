@@ -1,8 +1,11 @@
 import requests
 import subprocess
+from phpserialize import *
 import base64
+
 from typing import List
 from colorama import Fore, Back
+from phpserialize import *
 
 import csv
 import matplotlib.pyplot as plt
@@ -231,7 +234,7 @@ class wp:
         """        
         cursor = mysql.cursor()
         
-        query = ('''select * from wp_usermeta where user_id = %s and meta_key like "%capabilities"''')
+        query = ('select * from wp_usermeta where user_id = %s and meta_key like "%capabilities"')
         # and meta_value like '%administrator'
         cursor.execute(query, (user_id,))
 
@@ -250,6 +253,46 @@ class wp:
         cursor.close()
 
         return site_ids, sites
+
+
+    def get_site_plugins(self,blog_id:int,mysql) -> list[str]:
+        cursor = mysql.cursor()
+        
+        query = ('select option_value from wp_%s_options where option_name = "active_plugins"')
+        cursor.execute(query, (blog_id,))
+
+        results = cursor.fetchall()
+        plugins = []
+
+        for r in results:
+            data = r[0]
+            plugin_dict = loads(data.encode())
+            for p in plugin_dict.keys():
+                plugin = plugin_dict[p].decode()
+                plugins.append(plugin) #[0])
+            
+
+        cursor.close()
+
+        return plugins
+    
+
+    def get_site_themes(self,blog_id:int,mysql) -> list[str]:
+        cursor = mysql.cursor()
+
+        # key = str(blog_id)
+        query = ('select option_value from wp_%s_options where option_name = "template"')
+        cursor.execute(query, (blog_id,))
+
+        results = cursor.fetchall()
+        themes = []
+
+        for r in results:
+            themes.append(r[0])
+
+        cursor.close()
+
+        return themes
 
 
     def get_site_info(self,blog_id:int,mysql) -> str:

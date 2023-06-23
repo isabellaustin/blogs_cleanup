@@ -2,17 +2,24 @@ venv
 .mypy_cache
 __pycache__
 config.json
+
 .all_users.txt.swp
 all_sites.txt
 all_users.txt
 blogs_users.txt
 delete_users.txt
 outside_users.txt
+
 multisite_users.csv
 user_sitedata.csv
 userdata.csv
 sitedata.csv
 sitestats.csv
+# pluginstats.csv
+plugindata.csv
+# themestats.csv
+themedata.csv
+
 yearly_blog_reg.png
 quarterly_blog_reg.png
 yearly_user_reg.png
