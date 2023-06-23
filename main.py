@@ -117,8 +117,8 @@ def main(blogs) -> None:
     # userdata_csv(username_list, id_list)
     # sitestats_csv(username_list,outside_users)
     sitedata_csv(username_list,id_list,user_blogs)
-    plugins_csv()
-    # themes_csv()
+    # plugins_csv()
+    themes_csv()
 
     cnx.close()
     # get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
