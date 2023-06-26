@@ -411,21 +411,23 @@ class wp:
         plt.rcParams["figure.figsize"] = [23.50, 15.50]
         plt.rcParams["figure.autolayout"] = True
         
-        plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
-        plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
-        plt.xticks(rotation = 90)
-        plt.yticks(np.arange(min(yearly_reg.values()), max(sums), 50))
+        fig1, ax1 = plt.subplots()
+        
+        ax1.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+        ax1.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+        ax1.tick_params(axis='x', labelrotation = 90)
+        ax1.set_yticks(np.arange(min(yearly_reg.values()), max(sums), 50))
 
-        plt.title("Blog Registration by Date")
-        plt.xlabel("Date (yyyy-mm)")
-        plt.ylabel("Number of Blogs Registered")
-        plt.margins(x=0.01, y=0.01)
+        ax1.set_title("Blog Registration by Date")
+        ax1.set_xlabel("Date (yyyy-mm)")
+        ax1.set_ylabel("Number of Blogs Registered")
+        ax1.margins(x=0.01, y=0.01)
 
-        plt.legend(prop={'size': 15},borderpad=2)
+        ax1.legend(prop={'size': 15},borderpad=2)
         # plt.legend(loc="upper left")
 
-        plt.show(block=True)
-        plt.savefig('yearly_blog_reg.png')
+        fig1.show()
+        fig1.savefig('yearly_blog_reg.png')
 
 
     def quarterly_blog_reg(yearly_reg, new_dates) -> None:
@@ -449,17 +451,19 @@ class wp:
         plt.rcParams["figure.figsize"] = [10.50, 7.50]
         plt.rcParams["figure.autolayout"] = True
 
-        plt.plot(quarters, df['registrations'])
-        plt.xticks(rotation = 90)
-        plt.yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
+        fig2, ax2 = plt.subplots()
 
-        plt.title("Quarterly Blog Registrations")
-        plt.xlabel("Quarter")
-        plt.ylabel("Number of Blogs Registered")
-        plt.margins(x=0.01, y=0.01)
+        ax2.plot(quarters, df['registrations'])
+        ax2.tick_params(axis='x', labelrotation = 90)
+        ax2.set_yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
 
-        plt.show(block=True)
-        plt.savefig('quarterly_blog_reg.png')
+        ax2.set_title("Quarterly Blog Registrations")
+        ax2.set_xlabel("Quarter")
+        ax2.set_ylabel("Number of Blogs Registered")
+        ax2.margins(x=0.01, y=0.01)
+
+        fig2.show()
+        fig2.savefig('quarterly_blog_reg.png')
 
 
     def yearly_user_reg(yearly_reg, new_dates) -> None:
@@ -473,52 +477,45 @@ class wp:
 
         plt.rcParams["figure.figsize"] = [23.50, 15.50]
         plt.rcParams["figure.autolayout"] = True
+
+        fig3, ax3 = plt.subplots()
         
-        plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
-        plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
-        plt.xticks(rotation = 90)
-        plt.yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
+        ax3.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
+        ax3.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
+        ax3.tick_params(axis='x', labelrotation = 90)
+        ax3.set_yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
 
-        plt.title("User Registration by Date")
-        plt.xlabel("Date (yyyy-mm)")
-        plt.ylabel("Number of Users Registered")
-        plt.margins(x=0.01, y=0.01)
+        ax3.set_title("User Registration by Date")
+        ax3.set_xlabel("Date (yyyy-mm)")
+        ax3.set_ylabel("Number of Users Registered")
+        ax3.margins(x=0.01, y=0.01)
 
-        plt.legend(prop={'size': 15},borderpad=2)
+        ax3.legend(prop={'size': 15},borderpad=2)
         # plt.legend(loc="upper left")
 
-        plt.show(block=True)
-        plt.savefig('yearly_user_reg.png')
+        fig3.show()
+        fig3.savefig('yearly_user_reg.png')
 
 
-    # def plugin_activations(yearly_reg, new_dates) -> None:
-    #     # creates cumulative reg values
-    #     sums = []
-    #     total = 0
-    #     for r in list(yearly_reg.values()):
-    #         total += r
-    #         sums.append(total)
-    #     log_sum = [(i//10) for i in sums]
+    def plugin_activation(x_values, y_values) -> None:
+        plt.rcParams["figure.autolayout"] = True
 
-    #     plt.rcParams["figure.figsize"] = [23.50, 15.50]
-    #     plt.rcParams["figure.autolayout"] = True
-        
-    #     plt.plot(new_dates[:-1], list(yearly_reg.values())[:-1], label='month-year registrations') #[:-1] removes 'None' value from Graph; "None" is from the admin site's reg date
-    #     plt.plot(new_dates[:-1], log_sum[:-1], label='cumulative registrations (values % 10)')
-    #     plt.xticks(rotation = 90)
-    #     plt.yticks(np.arange(min(yearly_reg.values())-1, max(sums), 50))
+        fig4, ax4 = plt.subplots()
 
-    #     plt.title("User Registration by Date")
-    #     plt.xlabel("Date (yyyy-mm)")
-    #     plt.ylabel("Number of Users Registered")
-    #     plt.margins(x=0.01, y=0.01)
+        y_pos = np.arange(len(x_values))
+        ax4.bar(y_pos, y_values, align='center', color='orange', width=0.8)
+    
+        ax4.set_title("Plugin Use by Activations")
+        ax4.set_xlabel("Number of Activations")
+        ax4.set_xticks(y_pos, x_values)
+        ax4.set_ylabel("Number of Plugins Activated")
 
-    #     plt.legend(prop={'size': 15},borderpad=2)
-    #     # plt.legend(loc="upper left")
+        for y, x in zip(y_values, y_pos): #value of each bar
+            ax4.annotate(f'{y}\n', xy=(x, y), ha='center', va='center')
 
-    #     plt.show(block=True)
-    #     plt.savefig('yearly_user_reg.png')
-
+        fig4.show()
+        fig4.savefig('plugin_activation.png')
+ 
 
     def remove_multisite_admins() -> None:
         multisite_user = []
@@ -545,24 +542,4 @@ class wp:
                     # wp.remove_role(email,path)
                     print(f"{Fore.WHITE}{Back.RED} ADMIN {email} was removed from {path}.{Back.RESET}{Fore.RESET}")
 
-
-    # def all_plugins(self) -> None:
-    #     """delete a blog
-
-    #     Args:
-    #         blog_id (int): unique id number
-    #     """  
-    #     encoding = 'ascii'      
-    #     p = subprocess.run("wp plugin list --path=/var/www/html", shell=True, capture_output=True)
-    #     # print(p.stdout)
-    #     with open('all_plugs.csv', 'w', encoding='UTF8') as input_file: 
-    #         # for row in csv.reader(input_file, delimiter="\'"):
-    #             writer = csv.writer(input_file)
-    #             writer.writerow(p.decode())
-    #             # print(p.stdout)
-
-    #     output = p.communicate()[0].decode(encoding)
-    #     edits = csv.reader(output.splitlines(), delimiter="\ ")
-    #     for row in edits:
-    #         print(row)
 
