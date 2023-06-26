@@ -4,10 +4,8 @@ from phpserialize import *
 import base64
 
 from typing import List
-from colorama import Fore, Back
 from phpserialize import *
 
-import csv
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -22,6 +20,7 @@ class wp:
         self.make_cred()
         self.headers = {'Authorization': f'Basic {self.token}', 'connection': 'close'}
         self.session = requests.Session()
+
 
     def __str__(self) -> str:
         return f"<wp({self.url})>"
@@ -110,7 +109,7 @@ class wp:
         subprocess.run(f"wp site delete {blog_id}", shell=True, capture_output=True)
 
 
-# DELETION ========================================================================================
+# REMOVE MULTISITE USERS ==========================================================================
     def remove_role(self, user_email, blog_path) -> None:
         subprocess.run(f"wp user remove-role {user_email} administrator --url=https://blogs-dev.butler.edu{blog_path}", shell=True, capture_output=True)
 
@@ -398,7 +397,8 @@ class wp:
 
         return sites
 
-# ====================
+
+# GRAPHS ==========================================================================================
     def yearly_blog_reg(yearly_reg, new_dates) -> None:
         # creates cumulative reg values
         sums = []
@@ -516,30 +516,3 @@ class wp:
         fig4.show()
         fig4.savefig('plugin_activation.png')
  
-
-    def remove_multisite_admins() -> None:
-        multisite_user = []
-        user_indices = {}
-        # indices_count = collections.Counter()
-        
-        with open('multisite_users.csv') as f:
-            for row in csv.reader(f, delimiter=','):
-                multisite_user.append(row[0])
-                user_indices[row[0]] = []
-
-        with open('user_sitedata.csv') as input_file:
-            for row in csv.reader(input_file, delimiter=','):
-
-                if row[1] in user_indices.keys():
-                    user_indices[row[1]].append(row[3])
-
-            user_emails = list(user_indices.keys())
-            for email in user_emails:
-                blog_paths = list(user_indices[email])
-                for path in blog_paths:
-                    # what if it is there own site? (ex. bquincy@butler.edu is admin on /bquincy/)
-
-                    # wp.remove_role(email,path)
-                    print(f"{Fore.WHITE}{Back.RED} ADMIN {email} was removed from {path}.{Back.RESET}{Fore.RESET}")
-
-

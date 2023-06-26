@@ -1,4 +1,5 @@
 from wordpress import wp
+from data import d
 import json
 import mysql.connector
 
@@ -32,15 +33,11 @@ other_users_tbd = {}
 yearly_reg = {}
 yearly_user_reg = {}
 
-sites = {}
-site_plugins = {} 
 inactive = []
-active1, active6, active21, active101, active501 = [], [], [], [], []
 
 # all_kept_users = []
 # all_del_users = []
 # all_other_del = []
-#==========================================
 
 def main(blogs) -> None:
     all_kept_sites = 0
@@ -69,67 +66,67 @@ def main(blogs) -> None:
     blogs.get_user_blogs(user_blogs, cnx)
     sites = list(user_blogs.keys()) #gets site id
 
-    # for site in sites:
-    #     """gets the list of users on a site"""        
-    #     site_users = blogs.get_site_users(site, cnx)
-    #     remaining_users = len(site_users)
-    #     site_path = user_blogs[site]
+    for site in sites:
+        """gets the list of users on a site"""        
+        site_users = blogs.get_site_users(site, cnx)
+        remaining_users = len(site_users)
+        site_path = user_blogs[site]
          
-    #     for u in site_users: 
-    #         username = id_username[u] # key: id, value: username
+        for u in site_users: 
+            username = id_username[u] # key: id, value: username
 
-    #         if username in inactive_data: #if user is inactive
-    #             print(f"{Fore.RED}{username} will be removed from {site_path}{Fore.RESET}")
+            if username in inactive_data: #if user is inactive
+                print(f"{Fore.RED}{username} will be removed from {site_path}{Fore.RESET}")
 
-    #             remaining_users-=1
+                remaining_users-=1
 
-    #             if username in outside_data: #non-BU deleted
-    #                 other_users_tbd[username] = u # key: username, value: id
+                if username in outside_data: #non-BU deleted
+                    other_users_tbd[username] = u # key: username, value: id
 
-    #                 # all_other_del.append(username)
-    #                 if username not in all_other_del_unique: 
-    #                     all_other_del_unique.append(username)
-    #             else:                       #BU deleted
-    #                 users_tbd[username] = u # key: username, value: id
+                    # all_other_del.append(username)
+                    if username not in all_other_del_unique: 
+                        all_other_del_unique.append(username)
+                else:                       #BU deleted
+                    users_tbd[username] = u # key: username, value: id
 
-    #                 # all_del_users.append(username)
-    #                 if username not in all_del_users_unique: 
-    #                     all_del_users_unique.append(username) 
-    #         else:
-    #             print(f"{Fore.GREEN}{username} will not be removed from {site_path}{Fore.RESET}")
+                    # all_del_users.append(username)
+                    if username not in all_del_users_unique: 
+                        all_del_users_unique.append(username) 
+            else:
+                print(f"{Fore.GREEN}{username} will not be removed from {site_path}{Fore.RESET}")
 
-    #             # all_kept_users.append(username)
-    #             if username not in all_kept_users_unique: 
-    #                 all_kept_users_unique.append(username)
+                # all_kept_users.append(username)
+                if username not in all_kept_users_unique: 
+                    all_kept_users_unique.append(username)
 
-    #     if remaining_users == 0:
-    #         print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Back.RESET}")
+        if remaining_users == 0:
+            print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Back.RESET}")
 
-    #         all_del_sites+=1
-    #         sites_tbd[site_path] = site # key: path, value: id
-    #     else:
-    #         all_kept_sites+=1
+            all_del_sites+=1
+            sites_tbd[site_path] = site # key: path, value: id
+        else:
+            all_kept_sites+=1
 
-    #     index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
-    #     print(f"SITE {index_num} OF {len(sites)}")
+        index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
+        print(f"SITE {index_num} OF {len(sites)}")
 
     id_list = list(id_username.keys())
     username_list = list(id_username.values())
 
     # ===================================================
-    # blog_deletion()
-    # user_deletion(outside_users)
+    blog_deletion()
+    user_deletion(outside_users)
     
-    # fetch_multisite_users(username_list,id_list)
-    # wp.remove_multisite_admins()
+    # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique, cnx)
+    # data.remove_multisite_admins()
 
-    user_sitedata_csv(username_list,id_list,user_blogs)
-    userdata_csv(username_list, id_list)
+    # data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
+    # data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
 
-    sitestats_csv(username_list,outside_users)
-    sitedata_csv(username_list,id_list,user_blogs)
-    plugins_csv()
-    themes_csv()
+    # data.sitestats_csv(username_list,outside_users)
+    # data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
+    # data.plugins_csv(cnx)
+    # data.themes_csv(cnx)
 
     cnx.close()
     # get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
@@ -199,327 +196,6 @@ def user_deletion(outside_users) -> None:
     # print(len(all_other_del_unique))
 
 
-# DATA ============================================================================================
-def fetch_multisite_users(username_list,id_list,) -> None:  
-    """Gets the email for users that are on 15 or more sites and the amount of sites they're on
-
-    Args:
-        id_username (dict): dict of id and usernames
-    """     
-    
-    header = ['user_email', 'num_of_sites'] 
-    with open('multisite_users.csv', 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-
-        print("Fetching multisite users...")
-        for user in tqdm(list(all_kept_users_unique)):
-            index = username_list.index(f"{user}")
-            id = id_list[index]
-
-            user_site_ids, user_sites = blogs.get_user_sites(id,cnx)
-            if len(user_sites) >= 15:
-                data = [f'{user}', f'{len(user_sites)}']
-                writer.writerow(data)
-
-
-def user_sitedata_csv(username_list, id_list, user_blogs) -> None:
-    """Lists the site_id and slug for each site a user is on
-
-    Args:
-        username_list (list): list of just usernames from id_username dict
-        id_list (list): list of just user ids from id_username dict
-        user_blogs (list): list of blogs in the database
-    """    
-    
-    header = ["user_id", "user_email", "site_id", "slug"] 
-    with open('user_sitedata.csv', 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-
-        print("Fetching users' site information...")
-        for user in tqdm(username_list):
-            index = username_list.index(f"{user}")
-            id = id_list[index] #user_id
-
-            user_site_ids, user_site_roles = blogs.get_user_sites(id,cnx)
-            for blog_id in user_site_ids:
-                try:
-                    path = user_blogs[blog_id]
-                except KeyError as ke:
-                    key.append(blog_id) #37
-                    continue
-
-                data = [f'{id}', f'{user}', f'{blog_id}', f'{path}']
-                writer.writerow(data)
-
-
-def userdata_csv(username_list, id_list) -> None:
-    header = ["user_id", "user_email", "user_registered"] 
-    with open('userdata.csv', 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-
-        print("Fetching user information...")
-        for user in tqdm(username_list):
-            index = username_list.index(f"{user}")
-            id = id_list[index] #user_id
-
-            user_reg_date = blogs.get_user_info(id,cnx)
-
-            if user_reg_date not in user_dates:
-                    user_dates.append(user_reg_date) 
-                    regs = blogs.get_user_regs(user_reg_date,cnx)
-                    # print(year, regs)
-                    yearly_user_reg[user_reg_date] = regs
-
-            data = [f'{id}', f'{user}', f'{user_reg_date}']
-            writer.writerow(data)
-    
-    date_list = list(yearly_user_reg.keys())
-    ordered_dates = sorted(date_list)
-    new_dates = [x[:-1] for x in ordered_dates]
-
-    wp.yearly_user_reg(yearly_user_reg, new_dates)
-
-
-def sitestats_csv(username_list,outside_users) -> None:
-    # print("Fetching siteless users...")
-    # outside_values = list(outside_users.values())
-    # for ou in tqdm(outside_values):
-    #     id = blogs.get_id_by_email(ou, cnx)
-    #     user_sites = blogs.get_user_sites(id,cnx)
-        
-    #     if len(user_sites) == 0:
-    #         nomads.append(ou)
-
-    sites_count = collections.Counter()
-    header = ['user_email', 'num_of_sites'] 
-    with open('sitestats.csv', 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        with open('user_sitedata.csv') as input_file:
-
-            print("Fetching site stats...")
-            for user in tqdm(username_list):
-                for row in csv.reader(input_file, delimiter=','):
-                    sites_count[row[1]] += 1
-
-                # if sites_count[user] > 0: #8205
-                data = [f'{user}',f'{sites_count[user]}']
-                writer.writerow(data)
-
-
-def sitedata_csv(username_list, id_list, user_blogs) -> None:
-    """Gets blog_id, slug, registered, and last_updated for every site
-
-    Args:
-        username_list (list): list of just usernames from id_username dict
-        id_list (list): list of just user ids from id_username dict
-        user_blogs (list): list of blogs in the database
-    """    
-    
-    header = ["blog_id", "slug", "registered", "last_updated"]
-    with open('sitedata.csv', 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        
-        print("Fetching site information...")
-        for user in tqdm(username_list):
-            index = username_list.index(f"{user}")
-            user_id = id_list[index]
-        
-            user_site_ids, user_site_roles = blogs.get_user_sites(user_id,cnx)
-        
-            for blog_id in user_site_ids:
-                try:
-                    slug = user_blogs[blog_id]
-                except KeyError as ke:
-                    key.append(blog_id) #37
-                    continue
-                
-                try:
-                    year_month, last_updated = blogs.get_site_info(blog_id,cnx)
-                except ValueError as ve:
-                    pass
-                
-                if year_month not in blogs_dates:
-                    blogs_dates.append(year_month) 
-                    regs = blogs.get_blogs_regs(year_month,cnx)
-                    # print(year, regs)
-                    yearly_reg[year_month] = regs
-
-                data = [f'{blog_id}', f'{slug}', f'{year_month}', f'{last_updated}']
-                writer.writerow(data)
-
-        # df = pd.read_csv('sitedata.csv')
-        # df.drop_duplicates(inplace=True)
-        # df.to_csv('sitedata.csv', index=False)
-
-    date_list = list(yearly_reg.keys())
-    ordered_dates = sorted(date_list)
-    new_dates = [x[:-1] for x in ordered_dates] #remove the '%' from the x-axis values
-
-    # make graphs one-at-a-time
-    wp.yearly_blog_reg(yearly_reg, new_dates)
-    wp.quarterly_blog_reg(yearly_reg, new_dates)
-
-
-def plugins_csv() -> None:
-    plugin_count = collections.Counter()
-    unique_plugins = []
-
-    with open('sitedata.csv') as f:
-        for row in csv.reader(f, delimiter=','):
-            sites[row[1]] = (row[0])
-            site_plugins[row[1]] = []
-
-    print("Fetching plugin stats...")
-    for site in tqdm(list(sites.keys())[1:]):
-        id = sites[site]
-        blog_id = int(id)
-
-        plugins = blogs.get_site_plugins(blog_id,cnx)
-
-        if site in site_plugins.keys():
-            site_plugins[site] = plugins
-        
-        for p in site_plugins[site]:
-            if p not in unique_plugins:
-                unique_plugins.append(p)
-            plugin_count[p] += 1
-
-    pluginstats_csv(unique_plugins, plugin_count)
-        
-
-def pluginstats_csv(unique_plugins, plugin_count) -> None:
-    all_plugins = open("plugins.txt").read().splitlines()
-
-    headerS = ["plugin", "plugin_activations"]
-    with open('pluginstats.csv', 'w', encoding='UTF8') as input_file: 
-        writer = csv.writer(input_file)
-        writer.writerow(headerS)
-
-        for plug in unique_plugins:
-            activations = plugin_count[plug]
-
-            dataS = [f'{plug}', f'{plugin_count[plug]}']
-            writer = csv.writer(input_file)
-            writer.writerow(dataS)
-
-            try:
-                p = plug.split("/")[0]
-                all_plugins.remove(p)
-            except ValueError as ve:
-                pass
-            inactive = all_plugins
-
-            if activations <=5:
-                active1.append(plug)
-            elif activations <=20:
-                active6.append(plug)
-            elif activations <=100:
-                active21.append(plug)
-            elif activations <=500:
-                active101.append(plug)
-            elif activations >=501:
-                active501.append(plug)
-
-    x_values = ["1-5", "6-20", "21-100", "101-500", "501+"]
-    y_values = [len(active1), len(active6), len(active21), len(active101), len(active501)]
-    wp.plugin_activation(x_values, y_values)
-
-    plugindata_csv(inactive)
-        
-
-def plugindata_csv(inactive) -> None:       
-    header = ["inactive_plugin"]
-    with open('inactive_plugins.csv', 'w', encoding='UTF8') as input_file: 
-        writer = csv.writer(input_file)
-        writer.writerow(header)
-                
-        print("Fetching inactive plugins...")
-        for i in tqdm(inactive):
-            data = [f'{i}']
-            writer.writerow(data)
-
-    headerD = ["site_id", "slug", "plugin_count", "plugins"]
-    with open('plugindata.csv', 'w', encoding='UTF8') as input_file: 
-        writer = csv.writer(input_file)
-        writer.writerow(headerD)
-                
-        print("Fetching plugin information...")
-        for site in tqdm(list(sites.keys())[1:]):
-            id = sites[site]
-            blog_id = int(id)
-
-            plugins = blogs.get_site_plugins(blog_id,cnx)
-
-            if site in site_plugins.keys():
-                site_plugins[site] = plugins
-
-            dataD = [f'{id}', f'{site}', f'{len(site_plugins[site])}', f'{site_plugins[site]}']
-            writer.writerow(dataD)
-
-
-def themes_csv() -> None:
-    sites_dict = {}
-    themes_dict = {} 
-    theme_count = collections.Counter()
-    unique_themes = []
-
-    with open('sitedata.csv') as f:
-        for row in csv.reader(f, delimiter=','):
-            sites_dict[row[1]] = (row[0])
-            themes_dict[row[1]] = []
-
-    themestats_csv(sites_dict, themes_dict, theme_count, unique_themes)
-
-    headerD = ["site_id", "slug", "template_count", "site_templates"]
-    with open('themedata.csv', 'w', encoding='UTF8') as input_file: 
-        writer = csv.writer(input_file)
-        writer.writerow(headerD)
-                
-        print("Fetching theme information...")
-        for site in tqdm(list(sites_dict.keys())[1:]):
-            id = sites_dict[site]
-            blog_id = int(id)
-
-            themes = blogs.get_site_themes(blog_id,cnx)
-
-            if site in themes_dict.keys():
-                themes_dict[site] = themes
-
-            dataD = [f'{id}', f'{site}', f'{len(themes_dict[site])}', f'{themes_dict[site]}']
-            writer.writerow(dataD)
-
-
-def themestats_csv(sites_dict, themes_dict, theme_count, unique_themes) -> None:
-    headerS = ["theme", "theme_activations"]
-    with open('themestats.csv', 'w', encoding='UTF8') as input_file: 
-        writer = csv.writer(input_file)
-        writer.writerow(headerS)
-                
-        print("Fetching theme stats...")
-        for site in tqdm(list(sites_dict.keys())[1:]):
-            id = sites_dict[site]
-            blog_id = int(id)
-
-            themes = blogs.get_site_themes(blog_id,cnx)
-
-            if site in themes_dict.keys():
-                themes_dict[site] = themes
-            
-            for p in themes_dict[site]:
-                if p not in unique_themes:
-                    unique_themes.append(p)
-                theme_count[p] += 1
-                   
-        for plug in unique_themes:
-            dataS = [f'{plug}', f'{theme_count[plug]}']
-            writer.writerow(dataS)
-
-
 # STATISTICS ======================================================================================
 def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> None:
     logger.setLevel(logging.INFO)
@@ -570,6 +246,8 @@ if __name__ == "__main__":
     blogs = wp(url = cfg["url"],
                 username = cfg["username"],
                 password = cfg["password"])
+    
+    data = d()
     
     log_file = cfg['log_file']
     logger = logging.getLogger(__name__)
