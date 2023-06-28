@@ -1,10 +1,8 @@
 import requests
 import subprocess
-from phpserialize import *
 import base64
-
-from typing import List
 from phpserialize import *
+from typing import List
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -111,6 +109,7 @@ class wp:
 
 # REMOVE MULTISITE USERS ==========================================================================
     def remove_role(self, user_email, blog_path) -> None:
+        # print(f"{Fore.WHITE}{Back.RED} ADMIN {user_email} was removed from {blog_path}.{Back.RESET}{Fore.RESET}")
         subprocess.run(f"wp user remove-role {user_email} administrator --url=https://blogs-dev.butler.edu{blog_path}", shell=True, capture_output=True)
 
 
@@ -123,14 +122,15 @@ class wp:
             mysql (connector): SQL connection
         """        
         cursor = mysql.cursor()
-        
-        query = ('''select id, user_email, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
+        #, DATE_FORMAT(user_registered,'reg-date: %m-%d-%Y')
+        query = ('''select id, user_email
                     from wp_users 
                     where user_email not like "%@butler.edu"''') #strp time
         cursor.execute(query)
 
-        for(id, user_email, user_registered) in cursor:
-            outside_users [id, user_registered] = user_email
+        for(id, user_email) in cursor: #user_registered
+            # outside_users [id, user_registered] = user_email
+            outside_users[id] = user_email #id, user_registered] = user_email
             # outside_users[int(id)] = {"registered": user_registered, "email": user_email.split('@')[0]}
 
         cursor.close()
@@ -153,7 +153,6 @@ class wp:
         difference = set(blogs_users).difference(all_users)
 
         return difference
-
 
 # SITE_USERS LIST =================================================================================  
     def get_site_users(self, site_id, mysql) -> List[str]: 
@@ -234,24 +233,34 @@ class wp:
         cursor = mysql.cursor()
         
         query = ('select * from wp_usermeta where user_id = %s and meta_key like "%capabilities"')
-        # and meta_value like '%administrator'
         cursor.execute(query, (user_id,))
 
         results = cursor.fetchall()
-        sites = []
-        site_ids = []
 
+        sites = []
+        site_ids = {}
+        site_roles = []
+        
         for r in results:
             try:
-                site_ids.append(int(r[2].split("_")[1]))
+                site_id = int(r[2].split("_")[1])
+                sites.append(site_id)
+                site_ids[user_id] = sites
             except ValueError as ve:
                 continue
             
-            sites.append(r[3].split("_")[0])
+            try:
+                role = r[3]
+                role_dict = loads(role.encode())
+                for ro in list(role_dict.keys()):
+                    role = ro.decode()
+                site_roles.append(role)
+            except AttributeError as ae:
+                continue
 
         cursor.close()
 
-        return site_ids, sites
+        return site_ids, site_roles
 
 
     def get_site_plugins(self,blog_id:int,mysql) -> list[str]:
@@ -268,8 +277,7 @@ class wp:
             plugin_dict = loads(data.encode())
             for p in plugin_dict.keys():
                 plugin = plugin_dict[p].decode()
-                plugins.append(plugin) #[0])
-            
+                plugins.append(plugin)
 
         cursor.close()
 
@@ -446,7 +454,7 @@ class wp:
         df = pd.DataFrame({'date': quarterly_keys,'registrations': quarterly_values})
         df['quarter'] = pd.PeriodIndex(df['date'], freq='Q')
         quarters = [str(x) for x in list((df['quarter']))] #need to convert PeriodIndex to string
-        # print(df)
+        # print(quarters)
         
         plt.rcParams["figure.figsize"] = [10.50, 7.50]
         plt.rcParams["figure.autolayout"] = True

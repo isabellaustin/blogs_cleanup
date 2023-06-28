@@ -1,10 +1,7 @@
 from wordpress import wp
-import requests
-import mysql.connector
 import json
-from colorama import Fore, Back
 from phpserialize import *
-import base64
+
 from tqdm.auto import tqdm
 import csv
 import collections
@@ -19,13 +16,15 @@ class d:
                 password = cfg["password"])
 
        
-    def fetch_multisite_users(self,username_list,id_list,all_kept_users_unique,cnx) -> None:  
+    def fetch_multisite_users(self,username_list,id_list,all_kept_users_unique,user_blogs,cnx) -> None:  
         """Gets the email for users that are on 15 or more sites and the amount of sites they're on
 
         Args:
             id_username (dict): dict of id and usernames
         """  
-        
+
+        user_site_ids = {}
+
         header = ['user_email', 'num_of_sites'] 
         with open('multisite_users.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
@@ -36,16 +35,16 @@ class d:
                 index = username_list.index(f"{user}")
                 id = id_list[index]
 
-                user_site_ids, user_sites = self.wp.get_user_sites(id,cnx)
-                if len(user_sites) >= 15:
-                    data = [f'{user}', f'{len(user_sites)}']
+                user_site_ids, user_roles = self.wp.get_user_sites(id,cnx)
+
+                if len(user_site_ids[id]) >= 15:
+                    data = [f'{user}', f'{len(user_site_ids[id])}']
                     writer.writerow(data)
 
 
     def remove_multisite_admins(self) -> None:
         multisite_user = []
         user_indices = {}
-        # indices_count = collections.Counter()
         
         with open('multisite_users.csv') as f:
             for row in csv.reader(f, delimiter=','):
@@ -58,14 +57,15 @@ class d:
                 if row[1] in user_indices.keys():
                     user_indices[row[1]].append(row[3])
 
-            user_emails = list(user_indices.keys())
-            for email in user_emails:
-                blog_paths = list(user_indices[email])
-                for path in blog_paths:
-                    # what if it is there own site? (ex. bquincy@butler.edu is admin on /bquincy/)
-
-                    # self.wp.remove_role(email,path)
-                    print(f"{Fore.WHITE}{Back.RED} ADMIN {email} was removed from {path}.{Back.RESET}{Fore.RESET}")
+            with open('multisite_removals.csv', 'w', encoding='UTF8') as f:
+                writer = csv.writer(f)
+                user_emails = list(user_indices.keys())
+                for email in user_emails:
+                    blog_paths = list(user_indices[email])
+                    for path in blog_paths:
+                        # self.wp.remove_role(email,path)
+                        data = [f"{email} was removed from {path}."]
+                        writer.writerow(data)
 
 
     def user_sitedata_csv(self,username_list,id_list,user_blogs,key,cnx) -> None:
@@ -87,7 +87,7 @@ class d:
                 index = username_list.index(f"{user}")
                 id = id_list[index] #user_id
 
-                user_site_ids, user_site_roles = self.wp.get_user_sites(id,cnx)
+                user_site_ids, user_roles = self.wp.get_user_sites(id,cnx)
                 for blog_id in user_site_ids:
                     try:
                         path = user_blogs[blog_id]
@@ -128,15 +128,13 @@ class d:
         wp.yearly_user_reg(yearly_user_reg, new_dates)
 
 
-    def sitestats_csv(self,username_list,outside_users) -> None:
-        # print("Fetching siteless users...")
-        # outside_values = list(outside_users.values())
-        # for ou in tqdm(outside_values):
-        #     id = blogs.get_id_by_email(ou, cnx)
-        #     user_sites = blogs.get_user_sites(id,cnx)
-            
-        #     if len(user_sites) == 0:
-        #         nomads.append(ou)
+    def sitestats_csv(self,username_list,id_list,outside_users,all_other_del_unique,nomads,cnx) -> None:
+        print("Fetching siteless users...")
+        for id in tqdm(list(outside_users.keys())):
+            user_site_ids, user_roles = self.wp.get_user_sites(id,cnx)
+        
+            if len(user_roles) == 0:
+                nomads.append(id)
 
         sites_count = collections.Counter()
         header = ['user_email', 'num_of_sites'] 
@@ -168,13 +166,14 @@ class d:
         with open('sitedata.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
             writer.writerow(header)
-            
+            # print(len(username_list))
             print("Fetching site information...")
             for user in tqdm(username_list):
+                
                 index = username_list.index(f"{user}")
                 user_id = id_list[index]
             
-                user_site_ids, user_site_roles = self.wp.get_user_sites(user_id,cnx)
+                user_site_ids, user_roles = self.wp.get_user_sites(user_id,cnx)
             
                 for blog_id in user_site_ids:
                     try:
@@ -191,7 +190,6 @@ class d:
                     if year_month not in blogs_dates:
                         blogs_dates.append(year_month) 
                         regs = self.wp.get_blogs_regs(year_month,cnx)
-                        # print(year, regs)
                         yearly_reg[year_month] = regs
 
                     data = [f'{blog_id}', f'{slug}', f'{year_month}', f'{last_updated}']
@@ -202,10 +200,10 @@ class d:
             # df.to_csv('sitedata.csv', index=False)
 
         date_list = list(yearly_reg.keys())
+
         ordered_dates = sorted(date_list)
         new_dates = [x[:-1] for x in ordered_dates] #remove the '%' from the x-axis values
 
-        # make graphs one-at-a-time
         wp.yearly_blog_reg(yearly_reg, new_dates)
         wp.quarterly_blog_reg(yearly_reg, new_dates)
 

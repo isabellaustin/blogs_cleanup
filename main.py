@@ -8,11 +8,6 @@ from colorama import Fore, Back
 from tqdm.auto import tqdm
 
 import logging
-import csv
-import collections
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 
 """stat variables"""
 all_kept_users_unique = []
@@ -35,10 +30,6 @@ yearly_user_reg = {}
 
 inactive = []
 
-# all_kept_users = []
-# all_del_users = []
-# all_other_del = []
-
 def main(blogs) -> None:
     all_kept_sites = 0
     all_del_sites = 0
@@ -58,7 +49,7 @@ def main(blogs) -> None:
 
     """creates a list of inactive users by finding the difference between the list of current users (created id_username list) 
         and all active users"""
-    inactive_data = blogs.get_inactive_users(exclude = exclude_all_users, blogs_users=id_username.values())
+    inactive_data = blogs.get_inactive_users(exclude = exclude_users, blogs_users=id_username.values())
 
     """creates a list of blogs in the database"""
     user_blogs = {}
@@ -117,19 +108,20 @@ def main(blogs) -> None:
     blog_deletion()
     user_deletion(outside_users)
     
-    # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique, cnx)
+    # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
     # data.remove_multisite_admins()
 
     # data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
     # data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
 
-    # data.sitestats_csv(username_list,outside_users)
+    data.sitestats_csv(username_list,id_list,outside_users,all_other_del_unique,nomads,cnx)
     # data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
+    # print(len(nomads))
     # data.plugins_csv(cnx)
     # data.themes_csv(cnx)
 
     cnx.close()
-    # get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
+    get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
 
 
 # DELETION ========================================================================================
@@ -185,7 +177,7 @@ def user_deletion(outside_users) -> None:
             id = users_tbd[u]
 
             # delete_user(id)
-            # other_users_tbd.pop(ou)
+            other_users_tbd.pop(ou)
 
         print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {ou} was deleted from the database.{Back.RESET}{Fore.RESET}")
 
@@ -210,7 +202,7 @@ def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> N
 
  
     logger.info(f"Number of Butler users on the network: {total_bu_users} ({len(all_del_users_unique)} inactive, {len(all_kept_users_unique)} active)")
-    logger.info(f"Number of non-Butler users on the network: {len(outside)}\n") # ({len(nomads)} siteless)
+    logger.info(f"Number of non-Butler users on the network: {len(outside)} ({len(nomads)} siteless)\n")
 
     # CLEANUP
     logger.info(f"Number of archived sites: {del_sites}")

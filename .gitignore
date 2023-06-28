@@ -10,8 +10,8 @@ blogs_users.txt
 delete_users.txt
 outside_users.txt
 plugins.txt
-
 multisite_users.csv
+multisite_removals.csv
 user_sitedata.csv
 userdata.csv
 sitedata.csv
@@ -21,7 +21,6 @@ plugindata.csv
 themestats.csv
 themedata.csv
 inactive_plugins.csv
-
 yearly_blog_reg.png
 quarterly_blog_reg.png
 yearly_user_reg.png
