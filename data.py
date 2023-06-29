@@ -35,7 +35,7 @@ class d:
                 index = username_list.index(f"{user}")
                 id = id_list[index]
 
-                user_site_ids, user_roles = self.wp.get_user_sites(id,cnx)
+                user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
 
                 if len(user_site_ids[id]) >= 15:
                     data = [f'{user}', f'{len(user_site_ids[id])}']
@@ -87,16 +87,21 @@ class d:
                 index = username_list.index(f"{user}")
                 id = id_list[index] #user_id
 
-                user_site_ids, user_roles = self.wp.get_user_sites(id,cnx)
-                for blog_id in user_site_ids:
-                    try:
-                        path = user_blogs[blog_id]
-                    except KeyError as ke:
-                        key.append(blog_id) #37
-                        continue
+                user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
+                try:
+                    sites = user_site_ids[id]
 
-                    data = [f'{id}', f'{user}', f'{blog_id}', f'{path}']
-                    writer.writerow(data)
+                    for blog_id in user_site_ids[id]:
+                        try:
+                            path = user_blogs[blog_id]
+                        except KeyError as ke:
+                            key.append(blog_id) #37
+                            continue
+
+                        data = [f'{id}', f'{user}', f'{blog_id}', f'{path}']
+                        writer.writerow(data)
+                except KeyError as ke:
+                    continue
 
 
     def userdata_csv(self,username_list,id_list,user_dates,yearly_user_reg,cnx) -> None:
@@ -106,7 +111,7 @@ class d:
             writer.writerow(header)
 
             print("Fetching user information...")
-            for user in username_list:
+            for user in tqdm(username_list):
                 index = username_list.index(f"{user}")
                 id = id_list[index] #user_id
 
@@ -128,10 +133,10 @@ class d:
         wp.yearly_user_reg(yearly_user_reg, new_dates)
 
 
-    def sitestats_csv(self,username_list,id_list,outside_users,all_other_del_unique,nomads,cnx) -> None:
+    def sitestats_csv(self,username_list,outside_users,nomads,cnx) -> None:
         print("Fetching siteless users...")
         for id in tqdm(list(outside_users.keys())):
-            user_site_ids, user_roles = self.wp.get_user_sites(id,cnx)
+            user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
         
             if len(user_roles) == 0:
                 nomads.append(id)
@@ -173,19 +178,16 @@ class d:
                 index = username_list.index(f"{user}")
                 user_id = id_list[index]
             
-                user_site_ids, user_roles = self.wp.get_user_sites(user_id,cnx)
+                user_site_ids, user_roles, user_sites = self.wp.get_user_sites(user_id,cnx)
             
-                for blog_id in user_site_ids:
+                for blog_id in user_sites:
                     try:
                         slug = user_blogs[blog_id]
                     except KeyError as ke:
                         key.append(blog_id) #37
                         continue
-                    
-                    try:
-                        year_month, last_updated = self.wp.get_site_info(blog_id,cnx)
-                    except ValueError as ve:
-                        pass
+
+                    year_month, last_updated = self.wp.get_site_info(blog_id,cnx)
                     
                     if year_month not in blogs_dates:
                         blogs_dates.append(year_month) 

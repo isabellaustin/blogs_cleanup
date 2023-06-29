@@ -243,8 +243,7 @@ class wp:
         
         for r in results:
             try:
-                site_id = int(r[2].split("_")[1])
-                sites.append(site_id)
+                sites.append(int(r[2].split("_")[1]))
                 site_ids[user_id] = sites
             except ValueError as ve:
                 continue
@@ -260,7 +259,7 @@ class wp:
 
         cursor.close()
 
-        return site_ids, site_roles
+        return site_ids, site_roles, sites
 
 
     def get_site_plugins(self,blog_id:int,mysql) -> list[str]:
@@ -465,7 +464,9 @@ class wp:
         ax2.tick_params(axis='x', labelrotation = 90)
         ax2.set_yticks(np.arange(min(quarterly_values)-2, max(quarterly_values), 50))
 
-        ax2.set_title("Quarterly Blog Registrations")
+        fig2.suptitle("Quarterly Blog Registrations")
+        # ax2.set_title("Quarterly Blog Registrations")
+        ax2.set_title("*Absent Quarters had Zero Blogs Registered*")
         ax2.set_xlabel("Quarter")
         ax2.set_ylabel("Number of Blogs Registered")
         ax2.margins(x=0.01, y=0.01)

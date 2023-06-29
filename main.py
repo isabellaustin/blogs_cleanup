@@ -60,6 +60,7 @@ def main(blogs) -> None:
     for site in sites:
         """gets the list of users on a site"""        
         site_users = blogs.get_site_users(site, cnx)
+
         remaining_users = len(site_users)
         site_path = user_blogs[site]
          
@@ -108,17 +109,18 @@ def main(blogs) -> None:
     blog_deletion()
     user_deletion(outside_users)
     
-    # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
-    # data.remove_multisite_admins()
+    data.sitestats_csv(username_list,outside_users,nomads,cnx)
+    
+    data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
+    data.remove_multisite_admins()
 
-    # data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
-    # data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
+    data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
+    data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
 
-    data.sitestats_csv(username_list,id_list,outside_users,all_other_del_unique,nomads,cnx)
-    # data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
-    # print(len(nomads))
-    # data.plugins_csv(cnx)
-    # data.themes_csv(cnx)
+    data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
+
+    data.plugins_csv(cnx)
+    data.themes_csv(cnx)
 
     cnx.close()
     get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)

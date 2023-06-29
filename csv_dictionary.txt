@@ -1,0 +1,25 @@
+filename.csv key
+    multisite_users.csv	    : A list of users that are on 15+ sites and the number of sites they are on
+    multisite_removals.csv	: A list of the multisite users and which sites (via the site slug) they are on
+
+    plugindata.csv		    : A list of which and how many plugins each site uses
+    pluginstats.csv		    : A list of all plugins and how many activations they have
+    inactive_plugins.csv	: A list of plugins with 0 activations
+
+    sitedata.csv			: A list of all blogs with the following info: blog_id, slug, registered(yyyy-mm), last_updated
+    sitestats.csv			: A list of all users and how many sites they’re on
+
+    themedata.csv		    : A list of which and how many themes each site uses
+    themestats.csv		    : A list of all themes and how many activations they have
+
+    user_sitedata.csv		: A list of all the sites every user is on including the following info: user_id, user_email, site_id, slug
+    userdata.csv			: A list of all users with the following info: user_id, user_email, user_registered(yyyy-mm)
+
+
+filename.png key
+    plugin_activations.png	: A graph that displays plugin use by number of activations
+
+    quarterly_blog_reg.png	: A graph that displays blog registrations by yearly quarter
+    yearly_blog_reg.png		: A graph that displays blog registrations by date (yyyy-mm)
+
+    yearly_user_reg.png		: A graph that displays user registrations by date (yyyy-mm)
