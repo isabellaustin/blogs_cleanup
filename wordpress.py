@@ -30,7 +30,7 @@ class wp:
 
 
 # DELETION ========================================================================================
-    def create_user(self, username: str = "") -> dict:
+    def create_user(self, user_id: int = 0, site: str = "") -> dict: # user: str = "",
         """adds a user to a blog
 
         Args:
@@ -38,35 +38,16 @@ class wp:
 
         Returns:
             dict: _description_
-        """          
-        response = self.session.post(f"{self.api_url}users", headers = self.headers)
-        if response.status_code != 200:
-            return response.json()
-
-
-    def get_id_by_email(self, user_key, mysql) -> int: # user_key = username/first part of email
-        """Returns the id of users with non-Butler emails
-
-        Args:
-            user_key (str): user email
-            mysql (connector): SQL connection
-
-        Returns:
-            str: id for a non-Butler user
-        """ 
-        cursor = mysql.cursor()
-
-        query = (f'''select id from wp_users where user_email like "{user_key}%"''')
-        cursor.execute(query)
-
-        results = cursor.fetchone()
-        # if results is None:
-        #     return -1
-        id = int(results[0]) 
+        """      
+        # site_url = f"{self.url}{site}wp-json/wp/v2/users"
+        # response = self.session.get(site_url, headers = self.headers) #https://blogs-dev.butler.edu/npartenh/wp-json/wp/v2/users; {self.api_url}users
+        # print(response.json())
         
-        cursor.close()
+        p = subprocess.run(f"wp user add-role {user_id} contributor --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
+        status = p.stdout
+        print(status.decode())
 
-        return id
+        # p = subprocess.run(f"wp user delete {user_id} --yes --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
   
 
     def reassign_user(self, user_id, new_id) -> None:
@@ -76,8 +57,9 @@ class wp:
             user_id (int): unique id number
             new_id (int): the id that the soon-to-be-deleted user's content will be transfered to
         """        
-        p = subprocess.run(f"wp user delete {user_id} --reassign={new_id}", shell=True, capture_output=True)
-        # print(p.stdout)
+        p = subprocess.run(f"wp user delete {user_id} --reassign={new_id} --path=/var/www/html", shell=True, capture_output=True)
+        status = p.stdout
+        print(status.decode())
 
 
     def network_del_user(self, user_id) -> None:
@@ -86,7 +68,9 @@ class wp:
         Args:
             user_id (int): unique id number
         """        
-        subprocess.run(f"wp user delete {user_id} --network", shell=True, capture_output=True)
+        p = subprocess.run(f"wp user delete {user_id} --network --yes --path=/var/www/html", shell=True, capture_output=True)
+        status = p.stdout
+        print(status.decode())
 
 
     def archive_blog(self, blog_id) -> None:
@@ -95,7 +79,9 @@ class wp:
         Args:
             blog_id (int): unique id number
         """        
-        subprocess.run(f"wp site archive {blog_id}", shell=True, capture_output=True)
+        p = subprocess.run(f"wp site archive {blog_id} --path=/var/www/html", shell=True, capture_output=True)
+        status = p.stdout
+        print(status.decode())
 
     
     def delete_blog(self, blog_id) -> None:
@@ -104,7 +90,10 @@ class wp:
         Args:
             blog_id (int): unique id number
         """        
-        subprocess.run(f"wp site delete {blog_id}", shell=True, capture_output=True)
+        p = subprocess.run(f"wp site delete {blog_id} --path=/var/www/html", shell=True, capture_output=True)
+        # print(p)
+        status = p.stdout
+        print(status.decode())
 
 
 # REMOVE MULTISITE USERS ==========================================================================
@@ -131,7 +120,6 @@ class wp:
         for(id, user_email) in cursor: #user_registered
             # outside_users [id, user_registered] = user_email
             outside_users[id] = user_email #id, user_registered] = user_email
-            # outside_users[int(id)] = {"registered": user_registered, "email": user_email.split('@')[0]}
 
         cursor.close()
 
