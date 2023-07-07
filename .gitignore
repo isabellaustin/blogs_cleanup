@@ -16,8 +16,8 @@ user_sitedata.csv
 userdata.csv
 sitedata.csv
 sitestats.csv
-pluginstats.csv
 plugindata.csv
+pluginstats.csv
 themestats.csv
 themedata.csv
 inactive_plugins.csv
@@ -25,3 +25,4 @@ yearly_blog_reg.png
 quarterly_blog_reg.png
 yearly_user_reg.png
 plugin_activation.png
+.gitignore

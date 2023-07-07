@@ -81,7 +81,7 @@ def main(blogs) -> None:
                 if username in outside_data: #non-BU deleted
                     if username not in list(other_del_dict.keys()):
                         other_del_dict[site] = []
-                    other_del_dict[site].append(u)
+                    other_del_dict[site].append(u) # a dict of the sites non-BU users are on
 
                     other_users_tbd[username] = u # key: username, value: id
 
@@ -101,7 +101,7 @@ def main(blogs) -> None:
 
         if remaining_users == 0:
             print(f"{Fore.WHITE}{Back.RED}{site_path} has no remaining users and will be archived{Fore.RESET}{Back.RESET}")
-            deletion_dict[site_path] = site_users
+            deletion_dict[site_path] = site_users # a dict of users on sites that are tbd
 
             all_del_sites+=1
             sites_tbd[site_path] = site # key: path, value: id
@@ -112,27 +112,25 @@ def main(blogs) -> None:
 
         index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
         print(f"SITE {index_num} OF {len(sites)}")
+    
+    data.sitestats_csv(username_list,outside_users,nomads,cnx) #needs to run for 'siteless users' stats
+    data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
+    data.remove_multisite_admins()
+    data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
+    data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
+    data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
+    data.plugins_csv(cnx)
+    data.themes_csv(cnx)
 
     deletion(outside_users,user_blogs,id_username)
-    
-    # data.sitestats_csv(username_list,outside_users,nomads,cnx)
-    # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
-    # data.remove_multisite_admins()
-    # data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
-    # data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
-    # data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
-    # data.plugins_csv(cnx)
-    # data.themes_csv(cnx)
-
-    # cnx.close()
-    # get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
+    cnx.close()
+    get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
 
 
 # DELETION ========================================================================================
 def deletion(outside_users,user_blogs,id_username) -> None:
     """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
     #  site should already have zero users if its been put into the sites_tbd list
-    # sites = list(sites_tbd.keys())
 
     # BU users on sites
     BU_sites = list(deletion_dict.keys())
@@ -143,7 +141,7 @@ def deletion(outside_users,user_blogs,id_username) -> None:
         user_deletion(site, user_list)
 
         sites_tbd.pop(site)
-        # del deletion_dict[site]
+        del deletion_dict[site]
 
     # non-BU users on sites
     non_BU_sites = list(other_del_dict.keys())
@@ -152,7 +150,7 @@ def deletion(outside_users,user_blogs,id_username) -> None:
         site = user_blogs[blog_id]
 
         user_deletion(site, user_list)
-        # del other_del_dict[blog_id]
+        del other_del_dict[blog_id]
 
         # index = id_list.index(user_id)
         # username = username_list[index]
@@ -163,13 +161,10 @@ def deletion(outside_users,user_blogs,id_username) -> None:
         if id not in list(other_del_dict.keys()):
             # blogs.network_del_user(id)
             print("net del")
-            outside_users.pop(id)
 
             username = id_username[id]
             if username not in all_other_del_unique: 
                 all_other_del_unique.append(username)
-        else:
-            print(f"{id} NOT HERE")
 
 
 def user_deletion(site, user_list) -> None:
@@ -196,10 +191,7 @@ def user_deletion(site, user_list) -> None:
             # blogs.network_del_user(user_id)
             print("net del")
 
-            print(f"(Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the database.{Back.RESET}{Fore.RESET}")
-        else:
-            print(f"NOT IN LIST: {site,user_id}")
-            del_blog = False
+            print(f"(Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
             
     if del_blog:
         if site in list(sites_tbd.keys()):
@@ -207,8 +199,6 @@ def user_deletion(site, user_list) -> None:
             
             # blogs.archive_blog(blog_id)
             print(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}{Fore.RESET}")
-        # else:
-        #     print(f"NOT BEING DELETED: {site}")
     else:
         print(f"BLOG {site} could not be archived.")
 

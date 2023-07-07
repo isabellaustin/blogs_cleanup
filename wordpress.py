@@ -3,7 +3,6 @@ import subprocess
 import base64
 from phpserialize import *
 from typing import List
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -30,7 +29,7 @@ class wp:
 
 
 # DELETION ========================================================================================
-    def create_user(self, user_id: int = 0, site: str = "") -> dict: # user: str = "",
+    def create_user(self, user_id: int = 0, site: str = "") -> dict: 
         """adds a user to a blog
 
         Args:
