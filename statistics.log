@@ -1,0 +1,14 @@
+2023-07-07 15:39:07,116 - Initial number of sites: 8610
+2023-07-07 15:39:07,116 - Initial number of users: 9854 (8265 inactive, 1589 active)
+
+2023-07-07 15:39:07,116 - Number of Butler users on the network: 8003 (6487 inactive, 1516 active)
+2023-07-07 15:39:07,116 - Number of non-Butler users on the network: 1415 (1217 siteless)
+
+2023-07-07 15:39:07,116 - Number of archived sites: 5552
+2023-07-07 15:39:07,116 - Number of deleted users: 7902 (6487 Butler, 1415 non-Butler)
+
+2023-07-07 15:39:07,116 - Number of remaining sites: 3058
+2023-07-07 15:39:07,116 - Number of remaining users: 1516 (1516 Butler, 0 non-Butler)
+
+2023-07-07 15:39:07,116 - Percent decrease in sites: 64.48%
+2023-07-07 15:39:07,116 - Percent decrease in users: 80.19%

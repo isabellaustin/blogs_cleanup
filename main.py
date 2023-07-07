@@ -21,15 +21,13 @@ username_list = []
 #tbd: to be deleted
 sites_tbd = {}
 users_tbd = {}
+other_del_dict = {}
 other_users_tbd = {}
 abandoned_sites = {}
 deletion_dict = {}
 yearly_reg = {}
 yearly_user_reg = {}
-
-other_del_dict = {}
-
-
+other_id_tbd = ()
 
 def main(blogs) -> None:
     all_kept_sites = 0
@@ -79,9 +77,11 @@ def main(blogs) -> None:
                 remaining_users-=1
 
                 if username in outside_data: #non-BU deleted
-                    if username not in list(other_del_dict.keys()):
+                    # a dict of the sites non-BU users are on
+                    if site not in list(other_del_dict.keys()):
                         other_del_dict[site] = []
-                    other_del_dict[site].append(u) # a dict of the sites non-BU users are on
+                    if u not in other_del_dict[site]:
+                        other_del_dict[site].append(u) 
 
                     other_users_tbd[username] = u # key: username, value: id
 
@@ -112,23 +112,23 @@ def main(blogs) -> None:
 
         index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
         print(f"SITE {index_num} OF {len(sites)}")
-    
-    data.sitestats_csv(username_list,outside_users,nomads,cnx) #needs to run for 'siteless users' stats
-    data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
-    data.remove_multisite_admins()
-    data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
-    data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
-    data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
-    data.plugins_csv(cnx)
-    data.themes_csv(cnx)
 
-    deletion(outside_users,user_blogs,id_username)
+    data.sitestats_csv(username_list,outside_users,nomads,cnx) #needs to run for 'siteless users' stats
+    # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
+    # data.remove_multisite_admins()
+    # data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
+    # data.userdata_csv(username_list, id_list,user_dates,yearly_user_reg,cnx)
+    # data.sitedata_csv(username_list,id_list,user_blogs,blogs_dates,yearly_reg,key,cnx)
+    # data.plugins_csv(cnx)
+    # data.themes_csv(cnx)
+
+    deletion(outside_users,user_blogs,id_username,other_users_tbd)
     cnx.close()
     get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
 
 
 # DELETION ========================================================================================
-def deletion(outside_users,user_blogs,id_username) -> None:
+def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
     """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
     #  site should already have zero users if its been put into the sites_tbd list
 
@@ -138,7 +138,7 @@ def deletion(outside_users,user_blogs,id_username) -> None:
         user_list = deletion_dict[site]
         # print(site, user_list)
 
-        user_deletion(site, user_list)
+        user_deletion(site, user_list,id_username)
 
         sites_tbd.pop(site)
         del deletion_dict[site]
@@ -149,49 +149,47 @@ def deletion(outside_users,user_blogs,id_username) -> None:
         user_list = other_del_dict[blog_id]
         site = user_blogs[blog_id]
 
-        user_deletion(site, user_list)
+        user_deletion(site, user_list,id_username)
+       
         del other_del_dict[blog_id]
-
-        # index = id_list.index(user_id)
-        # username = username_list[index]
 
     #non-BU users NOT on sites
     non_BU_ids = list(outside_users.keys())
     for id in non_BU_ids:
         if id not in list(other_del_dict.keys()):
-            # blogs.network_del_user(id)
-            print("net del")
-
             username = id_username[id]
-            if username not in all_other_del_unique: 
-                all_other_del_unique.append(username)
 
+            # blogs.network_del_user(id)
+            print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
 
-def user_deletion(site, user_list) -> None:
+def user_deletion(site, user_list,id_username) -> None:
     # add buwebservices (UID = 9197309) to site
     if 9197309 not in user_list:
         print(f"buwebservices not in {site}'s user list")
         # blogs.create_user(9197309, site)
 
     del_blog = True
-    user_id_tbd = list(users_tbd.values())
-    other_id_tbd = list(other_users_tbd.values())
+    user_id_tbd = list(users_tbd.values()) #BU users (6487)
+    other_id_tbd = set([x for y in other_del_dict.values() for x in y]) #non-BU users; unique UIDs from the list of lists in other_del_dict.values() (198)
 
     for user_id in user_list:
         if user_id in user_id_tbd or user_id in other_id_tbd:
+            username = id_username[user_id]
             if user_id in user_id_tbd:
-                index = user_id_tbd.index(user_id)
-                username = list(users_tbd.keys())[index]
+                type = "Butler"
             else:
-                index = other_id_tbd.index(user_id)
-                username = list(other_users_tbd.keys())[index]
+                type = "Non-Butler"
+
+                if username in list(other_users_tbd.keys()):
+                    del other_users_tbd[username]
+
+                if username not in all_other_del_unique:
+                    all_other_del_unique.append(username)
 
             # blogs.reassign_user(user_id, 9197309)
             print("reassign")
             # blogs.network_del_user(user_id)
-            print("net del")
-
-            print(f"(Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
+            print(f"({type}){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
             
     if del_blog:
         if site in list(sites_tbd.keys()):
@@ -226,8 +224,8 @@ def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> N
 
     # REMAINING 
     logger.info(f"Number of remaining sites: {kept_sites}")
-    total_kept_users = len(all_kept_users_unique) + len(other_users_tbd)
-    logger.info(f"Number of remaining users: {total_kept_users} ({len(all_kept_users_unique)} Butler, {len(other_users_tbd)} non-Butler)\n")
+    total_kept_users = len(all_kept_users_unique) + (len(other_id_tbd) +len(other_users_tbd))
+    logger.info(f"Number of remaining users: {total_kept_users} ({len(all_kept_users_unique)} Butler, {(len(other_id_tbd) +len(other_users_tbd))} non-Butler)\n") #other_users_tbd
 
     # STATISTICS
     perc_blog_cleanup = (del_sites / len(sites)) * 100
