@@ -203,12 +203,12 @@ def user_deletion(site, user_list,id_username) -> None:
     if del_blog:
         if site in list(sites_tbd.keys()):
             blog_id = sites_tbd[site]
-            
+            '''
             # MAKE SITE SUBDIRECTORY
-            parent_dir = cfg['export_dir'] #backups is parent in this case
+            export_dir = cfg['export_dir'] #backups is parent in this case
             directory = site.split("/")[1]
 
-            path = os.path.join(parent_dir, directory)
+            path = os.path.join(export_dir, directory)
             os.mkdir(path)
             print("Directory '% s' created" % directory)
             
@@ -218,13 +218,13 @@ def user_deletion(site, user_list,id_username) -> None:
 
             # ZIP DIRECTORY AND MOVE TO 'BACKUPS'
             zip = shutil.make_archive(directory, 'zip', path)
-            shutil.move(zip, parent_dir)
+            shutil.move(zip, export_dir)
 
             # DELETE SUBDIRECTORY AND SITE
             shutil.rmtree(path)
             blogs.delete_blog(blog_id, del_logger)
-            
-            # blogs.archive_blog(blog_id, del_logger)
+            '''
+            blogs.archive_blog(blog_id, del_logger)
             
             # print(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}{Fore.RESET}")
             del_logger.info(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}{Fore.RESET}")
