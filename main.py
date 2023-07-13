@@ -5,6 +5,10 @@ import mysql.connector
 import colorama
 from colorama import Fore, Back
 import logging
+from tqdm.auto import tqdm
+import os
+import shutil
+
 
 all_kept_users_unique = []
 all_del_users_unique = []
@@ -113,7 +117,7 @@ def main(blogs) -> None:
         index_num = int(list(sites).index(site)) + 1    #starts at 1 instead of 0
         print(f"SITE {index_num} OF {len(sites)}")
 
-    data.sitestats_csv(username_list,outside_users,nomads,cnx) #needs to run for 'siteless users' stats
+    # data.sitestats_csv(username_list,outside_users,nomads,cnx) #needs to run for 'siteless users' stats
     # data.fetch_multisite_users(username_list,id_list, all_kept_users_unique,user_blogs,cnx)
     # data.remove_multisite_admins()
     # data.user_sitedata_csv(username_list,id_list,user_blogs,key,cnx)
@@ -129,14 +133,14 @@ def main(blogs) -> None:
 
 # DELETION ========================================================================================
 def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
+    del_logger.setLevel(logging.INFO)
     """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
     #  site should already have zero users if its been put into the sites_tbd list
 
     # BU users on sites
     BU_sites = list(deletion_dict.keys())
-    for site in BU_sites: 
+    for site in tqdm(BU_sites): 
         user_list = deletion_dict[site]
-        # print(site, user_list)
 
         user_deletion(site, user_list,id_username)
 
@@ -145,7 +149,7 @@ def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
 
     # non-BU users on sites
     non_BU_sites = list(other_del_dict.keys())
-    for blog_id in non_BU_sites:
+    for blog_id in tqdm(non_BU_sites):
         user_list = other_del_dict[blog_id]
         site = user_blogs[blog_id]
 
@@ -155,18 +159,21 @@ def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
 
     #non-BU users NOT on sites
     non_BU_ids = list(outside_users.keys())
-    for id in non_BU_ids:
+    for id in tqdm(non_BU_ids):
         if id not in list(other_del_dict.keys()):
             username = id_username[id]
 
-            # blogs.network_del_user(id)
-            print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
+            blogs.network_del_user(id)
+            # print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
+            del_logger.info(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
 
 def user_deletion(site, user_list,id_username) -> None:
+    del_logger.setLevel(logging.INFO)
     # add buwebservices (UID = 9197309) to site
     if 9197309 not in user_list:
-        print(f"buwebservices not in {site}'s user list")
-        # blogs.create_user(9197309, site)
+        # print(f"buwebservices not in {site}'s user list")
+        del_logger.info(f"buwebservices not in {site}'s user list")
+        blogs.create_user(del_logger,9197309, site)
 
     del_blog = True
     user_id_tbd = list(users_tbd.values()) #BU users (6487)
@@ -186,19 +193,44 @@ def user_deletion(site, user_list,id_username) -> None:
                 if username not in all_other_del_unique:
                     all_other_del_unique.append(username)
 
-            # blogs.reassign_user(user_id, 9197309)
-            print("reassign")
-            # blogs.network_del_user(user_id)
-            print(f"({type}){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
+            blogs.reassign_user(user_id, 9197309, del_logger)
+            # print("reassign")
+            blogs.network_del_user(user_id, del_logger)
+            
+            # print(f"({type}){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
+            del_logger.info(f"({type}){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
             
     if del_blog:
         if site in list(sites_tbd.keys()):
             blog_id = sites_tbd[site]
             
-            # blogs.archive_blog(blog_id)
-            print(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}{Fore.RESET}")
+            # MAKE SITE SUBDIRECTORY
+            parent_dir = cfg['export_dir'] #backups is parent in this case
+            directory = site.split("/")[1]
+
+            path = os.path.join(parent_dir, directory)
+            os.mkdir(path)
+            print("Directory '% s' created" % directory)
+            
+            # DOWNLOAD MEDIA
+            blogs.export_site(site,path)
+            blogs.get_attachments(site,path)
+
+            # ZIP DIRECTORY AND MOVE TO 'BACKUPS'
+            zip = shutil.make_archive(directory, 'zip', path)
+            shutil.move(zip, parent_dir)
+
+            # DELETE SUBDIRECTORY AND SITE
+            shutil.rmtree(path)
+            blogs.delete_blog(blog_id, del_logger)
+            
+            # blogs.archive_blog(blog_id, del_logger)
+            
+            # print(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}{Fore.RESET}")
+            del_logger.info(f"{Fore.WHITE}{Back.RED}BLOG {site} was archived.{Back.RESET}{Fore.RESET}")
     else:
         print(f"BLOG {site} could not be archived.")
+        del_logger.info(f"BLOG {site} could not be archived.")
 
 
 # STATISTICS ======================================================================================
@@ -240,13 +272,14 @@ def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> N
 # MAIN ============================================================================================
 if __name__ == "__main__":
     colorama.init()
-    cnx = mysql.connector.connect(user="wordpress", password="4AbyJVrcPTH6aHgfAqt3", host="docker-dev.butler.edu", database="wp_blogs_dev")
     
     with open('config.json', 'r') as f:
         cfg=json.load(f)
         exclude_users = cfg["exclude_users"]
         exclude_outside_users = cfg["exclude_outside_users"]
         exclude_all_users = cfg["exclude_all_users"]
+    
+    cnx = mysql.connector.connect(user=cfg["db_username"], password=cfg["db_password"], host="docker-dev.butler.edu", database="wp_blogs_dev")
 
     blogs = wp(url = cfg["url"],
                 username = cfg["username"],
@@ -255,10 +288,30 @@ if __name__ == "__main__":
     data = d()
     
     log_file = cfg['log_file']
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger("log1")
+
+    del_log_file = cfg['del_log_file']
+    del_logger = logging.getLogger("log2")
+
     formatter = logging.Formatter('%(asctime)s - %(message)s')
+
+    # statistics
     fh = logging.FileHandler(log_file, mode='w')
     fh.setFormatter(formatter)
     logger.addHandler(fh)
+
+    # deletion
+    fh2 = logging.FileHandler(del_log_file, mode='w')
+    fh2.setFormatter(formatter)
+    del_logger.addHandler(fh2)
+    
+    ''' MAKE 'BACKUPS' DIRECTORY
+    parent_dir = cfg['parent_dir']
+    directory = "backups"
+
+    path = os.path.join(parent_dir, directory)
+    os.mkdir(path) #0o666 allows read and write file operations
+    print("Directory '% s' created" % directory) 
+    '''
 
     main(blogs)

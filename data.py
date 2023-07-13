@@ -30,9 +30,13 @@ class d:
             writer.writerow(header)
 
             print("Fetching multisite users...")
-            for user in tqdm(list(all_kept_users_unique)):
+            for user in tqdm(all_kept_users_unique):
                 index = username_list.index(f"{user}")
                 id = id_list[index]
+
+                # for site in user_blogs.items():
+                #     site_id = site[0]
+                #     site_path = site[1]
 
                 user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
 

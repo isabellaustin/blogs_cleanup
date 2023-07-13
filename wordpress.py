@@ -1,3 +1,5 @@
+import json
+import os
 import requests
 import subprocess
 import base64
@@ -6,6 +8,8 @@ from typing import List
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import xml.etree.ElementTree as etree
+import urllib.request
 
 class wp:
 # INITALIZATION ===================================================================================
@@ -29,7 +33,7 @@ class wp:
 
 
 # DELETION ========================================================================================
-    def create_user(self, user_id: int = 0, site: str = "") -> dict: 
+    def create_user(self, del_logger, user_id: int = 0, site: str = "") -> dict: 
         """adds a user to a blog
 
         Args:
@@ -44,12 +48,13 @@ class wp:
         
         p = subprocess.run(f"wp user add-role {user_id} contributor --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
         status = p.stdout
-        print(status.decode())
+        # print(status.decode())
+        del_logger.info(status.decode())
 
         # p = subprocess.run(f"wp user delete {user_id} --yes --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
   
 
-    def reassign_user(self, user_id, new_id) -> None:
+    def reassign_user(self, user_id, new_id, del_logger) -> None:
         """deletes user {user_id} and reassigns their posts to declared user {new_id}
 
         Args:
@@ -58,10 +63,11 @@ class wp:
         """        
         p = subprocess.run(f"wp user delete {user_id} --reassign={new_id} --path=/var/www/html", shell=True, capture_output=True)
         status = p.stdout
-        print(status.decode())
+        # print(status.decode())
+        del_logger.info(status.decode())
 
 
-    def network_del_user(self, user_id) -> None:
+    def network_del_user(self, user_id, del_logger) -> None:
         """delete the user from the entire network
 
         Args:
@@ -69,10 +75,11 @@ class wp:
         """        
         p = subprocess.run(f"wp user delete {user_id} --network --yes --path=/var/www/html", shell=True, capture_output=True)
         status = p.stdout
-        print(status.decode())
+        # print(status.decode())
+        del_logger.info(status.decode())
 
 
-    def archive_blog(self, blog_id) -> None:
+    def archive_blog(self, blog_id, del_logger) -> None:
         """archive a blog
 
         Args:
@@ -80,10 +87,11 @@ class wp:
         """        
         p = subprocess.run(f"wp site archive {blog_id} --path=/var/www/html", shell=True, capture_output=True)
         status = p.stdout
-        print(status.decode())
+        # print(status.decode())
+        del_logger.info(status.decode())
 
     
-    def delete_blog(self, blog_id) -> None:
+    def delete_blog(self, blog_id, del_logger) -> None:
         """delete a blog
 
         Args:
@@ -92,7 +100,38 @@ class wp:
         p = subprocess.run(f"wp site delete {blog_id} --path=/var/www/html", shell=True, capture_output=True)
         # print(p)
         status = p.stdout
-        print(status.decode())
+        # print(status.decode())
+        del_logger.info(status.decode())
+
+    
+    def export_site(self,site: str = "",path: str = "") -> str:
+        p = subprocess.run(f"wp export --dir={path} --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
+        status = p.stdout
+        output = status.decode()
+        print(output)
+
+    def get_attachments(self,site: str = "",path: str = "") -> None:
+        response = requests.get(f'https://blogs-dev.butler.edu{site}wp-json/wp/v2/media')
+        
+        attachment_urls = []
+        file_dict = {}
+        filename = ""
+
+        for r in response.json():
+            for key in r.keys():
+                if key == 'guid':
+                    url = r[key]["rendered"].replace("blogs-dev", "blogs")
+                    filename = url.split("/")[-1]
+                    
+                    attachment_urls.append(url)
+            file_dict [url] = filename
+
+        for url in file_dict.keys():
+            r = requests.get(url)
+
+            file_path = os.path.join(path, file_dict[url])
+            with open(file_path,'wb') as f:
+                f.write(r.content)
 
 
 # REMOVE MULTISITE USERS ==========================================================================
