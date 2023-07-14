@@ -1,3 +1,4 @@
+from typing import Counter
 from wordpress import wp
 import json
 from phpserialize import *
@@ -15,14 +16,14 @@ class d:
                 password = cfg["password"])
 
        
-    def fetch_multisite_users(self,username_list,id_list,all_kept_users_unique,user_blogs,cnx) -> None:  
+    def fetch_multisite_users(self,id_username,all_kept_users_unique,user_blogs,cnx) -> None:  
         """Gets the email for users that are on 15 or more sites and the amount of sites they're on
 
         Args:
             id_username (dict): dict of id and usernames
         """  
 
-        user_site_ids = {}
+        user_site_ids: dict[int, list] = {}
 
         header = ['user_email', 'num_of_sites'] 
         with open('multisite_users.csv', 'w', encoding='UTF8') as f:
@@ -31,8 +32,8 @@ class d:
 
             print("Fetching multisite users...")
             for user in tqdm(all_kept_users_unique):
-                index = username_list.index(f"{user}")
-                id = id_list[index]
+                index = list(id_username.values()).index(f"{user}")
+                id = list(id_username.keys())[index]
 
                 # for site in user_blogs.items():
                 #     site_id = site[0]
@@ -47,7 +48,7 @@ class d:
 
     def remove_multisite_admins(self) -> None:
         multisite_user = []
-        user_indices = {}
+        user_indices: dict[str, list] = {}
         
         with open('multisite_users.csv') as f:
             for row in csv.reader(f, delimiter=','):
@@ -71,7 +72,7 @@ class d:
                         writer.writerow(data)
 
 
-    def user_sitedata_csv(self,username_list,id_list,user_blogs,key,cnx) -> None:
+    def user_sitedata_csv(self,id_username,user_blogs,cnx) -> None:
         """Lists the site_id and slug for each site a user is on
 
         Args:
@@ -79,16 +80,16 @@ class d:
             id_list (list): list of just user ids from id_username dict
             user_blogs (list): list of blogs in the database
         """    
-        
+        key = []
         header = ["user_id", "user_email", "site_id", "slug"] 
         with open('user_sitedata.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
             writer.writerow(header)
 
             print("Fetching users' site information...")
-            for user in tqdm(username_list):
-                index = username_list.index(f"{user}")
-                id = id_list[index] #user_id
+            for user in tqdm(id_username.items()):
+                id = user[0]
+                user = user[1]
 
                 user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
                 try:
@@ -107,16 +108,18 @@ class d:
                     continue
 
 
-    def userdata_csv(self,username_list,id_list,user_dates,yearly_user_reg,cnx) -> None:
+    def userdata_csv(self,id_username,user_dates,yearly_user_reg,cnx) -> None:
         header = ["user_id", "user_email", "user_registered"] 
         with open('userdata.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
             writer.writerow(header)
 
             print("Fetching user information...")
-            for user in tqdm(username_list):
-                index = username_list.index(f"{user}")
-                id = id_list[index] #user_id
+            for user in tqdm(id_username.items()):
+                id = user[0]
+                user = user[1]
+                # index = username_list.index(f"{user}")
+                # id = id_list[index] #user_id
 
                 user_reg_date = self.wp.get_user_info(id,cnx)
 
@@ -133,10 +136,10 @@ class d:
         ordered_dates = sorted(date_list)
         new_dates = [x[:-1] for x in ordered_dates]
 
-        wp.yearly_user_reg(yearly_user_reg, new_dates)
+        wp.yearly_user_reg_png(yearly_user_reg, new_dates)
 
 
-    def sitestats_csv(self,username_list,outside_users,nomads,cnx) -> None:
+    def sitestats_csv(self,id_username,outside_users,nomads,cnx) -> None:
         print("Fetching siteless users...")
         for id in tqdm(list(outside_users.keys())):
             user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
@@ -144,7 +147,7 @@ class d:
             if len(user_roles) == 0:
                 nomads.append(id)
 
-        sites_count = collections.Counter()
+        sites_count: Counter[str] = collections.Counter()
         header = ['user_email', 'num_of_sites'] 
         with open('sitestats.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
@@ -152,7 +155,8 @@ class d:
             with open('user_sitedata.csv') as input_file:
 
                 print("Fetching site stats...")
-                for user in tqdm(username_list):
+                for user in tqdm(id_username.items()):
+                    user = user[1]
                     for row in csv.reader(input_file, delimiter=','):
                         sites_count[row[1]] += 1
 
@@ -161,7 +165,7 @@ class d:
                     writer.writerow(data)
 
 
-    def sitedata_csv(self,username_list, id_list, user_blogs,blogs_dates,yearly_reg,key,cnx) -> None:
+    def sitedata_csv(self,id_username, user_blogs,blogs_dates,yearly_reg,cnx) -> None:
         """Gets blog_id, slug, registered, and last_updated for every site
 
         Args:
@@ -169,17 +173,16 @@ class d:
             id_list (list): list of just user ids from id_username dict
             user_blogs (list): list of blogs in the database
         """    
-        
+        key = []
         header = ["blog_id", "slug", "registered", "last_updated"]
         with open('sitedata.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             # print(len(username_list))
             print("Fetching site information...")
-            for user in tqdm(username_list):
-                
-                index = username_list.index(f"{user}")
-                user_id = id_list[index]
+            for user in tqdm(id_username.items()):
+                user_id = user[0]
+                user = user[1]
             
                 user_site_ids, user_roles, user_sites = self.wp.get_user_sites(user_id,cnx)
             
@@ -200,6 +203,7 @@ class d:
                     data = [f'{blog_id}', f'{slug}', f'{year_month}', f'{last_updated}']
                     writer.writerow(data)
 
+            # REMOVE DUPLICATE DATA
             # df = pd.read_csv('sitedata.csv')
             # df.drop_duplicates(inplace=True)
             # df.to_csv('sitedata.csv', index=False)
@@ -209,15 +213,15 @@ class d:
         ordered_dates = sorted(date_list)
         new_dates = [x[:-1] for x in ordered_dates] #remove the '%' from the x-axis values
 
-        wp.yearly_blog_reg(yearly_reg, new_dates)
-        wp.quarterly_blog_reg(yearly_reg, new_dates)
+        wp.yearly_blog_reg_png(yearly_reg, new_dates)
+        wp.quarterly_blog_reg_png(yearly_reg, new_dates)
 
 
     def plugins_csv(self,cnx) -> None:
-        plugin_count = collections.Counter()
+        plugin_count: Counter[int] = collections.Counter()
         unique_plugins = []
         sites = {}
-        site_plugins = {} 
+        site_plugins: dict[str, list] = {} 
 
         with open('sitedata.csv') as f:
             for row in csv.reader(f, delimiter=','):
@@ -314,10 +318,10 @@ class d:
 
 
     def themes_csv(self,cnx) -> None:
-        sites_dict = {}
-        themes_dict = {} 
-        theme_count = collections.Counter()
-        unique_themes = []
+        sites_dict: dict[str, str] = {}
+        themes_dict: dict[str, list] = {} 
+        theme_count: Counter[int] = collections.Counter()
+        unique_themes: list[str] = []
 
         with open('sitedata.csv') as f:
             for row in csv.reader(f, delimiter=','):

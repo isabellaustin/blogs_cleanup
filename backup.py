@@ -15,7 +15,7 @@ def main() -> None:
 
     # MAKE SITE SUBDIRECTORY
     parent_dir = cfg['export_dir'] #backups is parent in this case
-    directory = site.split("/")[1]
+    directory = site[1:-1]
 
     path = os.path.join(parent_dir, directory)
     os.mkdir(path)
@@ -73,5 +73,14 @@ if __name__ == "__main__":
     blogs = wp(url = cfg["url"],
                 username = cfg["username"],
                 password = cfg["password"])
+    
+    ''' MAKE 'BACKUPS' DIRECTORY
+    parent_dir = cfg['parent_dir']
+    directory = "backups"
+
+    path = os.path.join(parent_dir, directory)
+    os.mkdir(path) #0o666 allows read and write file operations
+    print("Directory '% s' created" % directory) 
+    '''
 
     main()

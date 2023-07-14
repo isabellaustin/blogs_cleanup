@@ -1,4 +1,3 @@
-import json
 import os
 import requests
 import subprocess
@@ -8,11 +7,8 @@ from typing import List
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import xml.etree.ElementTree as etree
-import urllib.request
 
 class wp:
-# INITALIZATION ===================================================================================
     def __init__(self, url: str = "https://localhost", username: str = "", password: str = "") -> None:
         self.url = url
         self.api_url = f"{self.url}/wp-json/wp/v2/"
@@ -32,8 +28,7 @@ class wp:
         self.token = base64.b64encode(credentials.encode()).decode('utf-8')
 
 
-# DELETION ========================================================================================
-    def create_user(self, del_logger, user_id: int = 0, site: str = "") -> dict: 
+    def create_user(self, del_logger, user_id: int = 0, site: str = "") -> None: 
         """adds a user to a blog
 
         Args:
@@ -42,17 +37,10 @@ class wp:
         Returns:
             dict: _description_
         """      
-        # site_url = f"{self.url}{site}wp-json/wp/v2/users"
-        # response = self.session.get(site_url, headers = self.headers) #https://blogs-dev.butler.edu/npartenh/wp-json/wp/v2/users; {self.api_url}users
-        # print(response.json())
-        
         p = subprocess.run(f"wp user add-role {user_id} contributor --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
         status = p.stdout
         # print(status.decode())
-        del_logger.info(status.decode())
-
-        # p = subprocess.run(f"wp user delete {user_id} --yes --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
-  
+        del_logger.info(status.decode())  
 
     def reassign_user(self, user_id, new_id, del_logger) -> None:
         """deletes user {user_id} and reassigns their posts to declared user {new_id}
@@ -97,18 +85,19 @@ class wp:
         Args:
             blog_id (int): unique id number
         """        
-        p = subprocess.run(f"wp site delete {blog_id} --path=/var/www/html", shell=True, capture_output=True)
+        p = subprocess.run(f"wp site delete {blog_id} --yes --path=/var/www/html", shell=True, capture_output=True)
         # print(p)
         status = p.stdout
         # print(status.decode())
         del_logger.info(status.decode())
 
     
-    def export_site(self,site: str = "",path: str = "") -> str:
+    def export_site(self,site: str = "",path: str = "") -> None:
         p = subprocess.run(f"wp export --dir={path} --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
         status = p.stdout
         output = status.decode()
         print(output)
+
 
     def get_attachments(self,site: str = "",path: str = "") -> None:
         response = requests.get(f'https://blogs-dev.butler.edu{site}wp-json/wp/v2/media')
@@ -134,13 +123,11 @@ class wp:
                 f.write(r.content)
 
 
-# REMOVE MULTISITE USERS ==========================================================================
     def remove_role(self, user_email, blog_path) -> None:
         # print(f"{Fore.WHITE}{Back.RED} ADMIN {user_email} was removed from {blog_path}.{Back.RESET}{Fore.RESET}")
         subprocess.run(f"wp user remove-role {user_email} administrator --url=https://blogs-dev.butler.edu{blog_path}", shell=True, capture_output=True)
 
 
-# OUTSIDE_USERS LIST ============================================================================== 
     def get_outside_users(self, outside_users, mysql) -> None:
         """Gets the id, username, and registration date of blogs users with non-Butler emails.
 
@@ -161,9 +148,8 @@ class wp:
 
         cursor.close()
 
-
-# INACTIVE_DATA LIST ==============================================================================  
-    def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> List[str]:
+ 
+    def get_inactive_users(self, exclude: list[str] = [], blogs_users: list[str] = []) -> set[str]:
         """Finds the difference between the list of current users and all active users 
             (all_users.txt) on blogs.butler.edu
 
@@ -180,8 +166,8 @@ class wp:
 
         return difference
 
-# SITE_USERS LIST =================================================================================  
-    def get_site_users(self, site_id, mysql) -> List[str]: 
+
+    def get_site_users(self, site_id, mysql) -> List[int]: 
         """Gets the users for a specific site.
 
         Args:
@@ -206,8 +192,7 @@ class wp:
 
         return users
 
-          
-# ID_USERNAME LIST ================================================================================
+
     def get_id_username(self, id_username, mysql) -> None: 
         """Gets the id and username of blogs users with Butler emails.
 
@@ -226,7 +211,6 @@ class wp:
         cursor.close()
 
 
-# USER_BLOGS LIST =================================================================================
     def get_user_blogs(self, user_blogs, mysql) -> None: 
         """Gets all the blog ids and blog paths.
 
@@ -245,8 +229,7 @@ class wp:
         cursor.close()
 
 
-# DATA ============================================================================================
-    def get_user_sites(self,user_id:int,mysql) -> list[str]:
+    def get_user_sites(self,user_id:int,mysql) -> tuple[dict[int, list[int]], list[any], list[int]]:
         """Returns a list of sites that a specific user is on
 
         Args:
@@ -327,7 +310,7 @@ class wp:
         return themes
 
 
-    def get_site_info(self,blog_id:int,mysql) -> str:
+    def get_site_info(self,blog_id:int,mysql) -> tuple[str, str]:
         """Returns the date a blog was registered and last updated as strings
 
         Args:
@@ -431,8 +414,7 @@ class wp:
         return sites
 
 
-# GRAPHS ==========================================================================================
-    def yearly_blog_reg(yearly_reg, new_dates) -> None:
+    def yearly_blog_reg_png(yearly_reg, new_dates) -> None:
         # creates cumulative reg values
         sums = []
         total = 0
@@ -463,7 +445,7 @@ class wp:
         fig1.savefig('yearly_blog_reg.png')
 
 
-    def quarterly_blog_reg(yearly_reg, new_dates) -> None:
+    def quarterly_blog_reg_png(yearly_reg, new_dates) -> None:
         q_key = (new_dates[:-1])
         quarterly_keys = []
         for i in range(0,len(q_key),4):
@@ -501,7 +483,7 @@ class wp:
         fig2.savefig('quarterly_blog_reg.png')
 
 
-    def yearly_user_reg(yearly_reg, new_dates) -> None:
+    def yearly_user_reg_png(yearly_reg, new_dates) -> None:
         # creates cumulative reg values
         sums = []
         total = 0
