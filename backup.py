@@ -1,6 +1,3 @@
-from lxml import etree
-import xml.etree.ElementTree as etree
-#https://lxml.de/tutorial.html
 import json
 import shutil
 import requests
@@ -9,9 +6,8 @@ import os
 from wordpress import wp
 import mysql.connector
 
-
 def main() -> None:
-    site = "/isabellaustin/"
+    site = "" # need to add some functionality for iterating through the necessary sites; otherwise this would just need to be the desired site's slug
 
     # MAKE SITE SUBDIRECTORY
     parent_dir = cfg['export_dir'] #backups is parent in this case
@@ -33,14 +29,26 @@ def main() -> None:
     shutil.rmtree(path)
 
 
-def export_site(self,site: str = "",path: str = "") -> str:
+def export_site(self,site: str,path: str) -> None:
+    """Download desired site as XML
+
+    Args:
+        site (str): desired site's slug/path
+        path (str): directory that the XML should be saved to
+    """    
     p = subprocess.run(f"wp export --dir={path} --url=https://blogs-dev.butler.edu{site} --path=/var/www/html", shell=True, capture_output=True)
     status = p.stdout
     output = status.decode()
     print(output)
 
 
-def get_attachments(self,site: str = "",path: str = "") -> None:
+def get_attachments(self,site: str,path: str) -> None:
+    """Download the desired site's media attachments
+
+    Args:
+        site (str): desired site's slug/path
+        path (str): directory that the XML should be saved to
+    """    
     response = requests.get(f'https://blogs-dev.butler.edu{site}wp-json/wp/v2/media')
     print(response.json())
     attachment_urls = []
@@ -79,7 +87,7 @@ if __name__ == "__main__":
     directory = "backups"
 
     path = os.path.join(parent_dir, directory)
-    os.mkdir(path) #0o666 allows read and write file operations
+    os.mkdir(path) 
     print("Directory '% s' created" % directory) 
     '''
 

@@ -14,14 +14,14 @@ all_del_users_unique: list[str] = []
 all_other_del_unique: list[str] = []
 user_dates: list[str] = []
 blogs_dates: list[str] = []
-nomads: list[int] = [] #list of users without any sites
+nomads: list[int] = []
 
-#tbd: to be deleted
+#tbd means to be deleted
 sites_tbd: dict[str, int] = {}
 users_tbd: dict[str, int] = {}
-other_del_dict: dict[int, list] = {} #list: ids of site users
+other_del_dict: dict[int, list[int]] = {} 
 other_users_tbd: dict[str, int] = {}
-deletion_dict: dict[str, list] = {} #list: ids of site users
+deletion_dict: dict[str, list[int]] = {}
 yearly_reg: dict[str, int] = {}
 yearly_user_reg: dict[str, int] = {}
 other_id_tbd = ()
@@ -51,7 +51,7 @@ def main(blogs) -> None:
     user_blogs: dict[int, str] = {}
     blogs.get_user_blogs(user_blogs, cnx)
 
-    sites = list(user_blogs.keys()) #gets site id
+    sites = list(user_blogs.keys())
     
     for site in sites:
         """gets the list of users on a site"""        
@@ -62,7 +62,7 @@ def main(blogs) -> None:
         site_path = user_blogs[site]
          
         for u in site_users: 
-            username = id_username[u] # key: id, value: username
+            username = id_username[u]
 
             if username in inactive_data:
                 print(f"{Fore.RED}{username} will be removed from {site_path}{Fore.RESET}")
@@ -117,7 +117,7 @@ def main(blogs) -> None:
     get_stats(inactive_data, outside_data, sites, all_kept_sites, all_del_sites, id_username)
 
 
-def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
+def deletion(outside_users: dict[int, str], id_username: dict[int, str]) -> None:
     del_logger.setLevel(logging.INFO)
     """archiving blogs if they are abandoned, otherwise, deleting necessary users"""  
     #  site should already have zero users if its been put into the sites_tbd list
@@ -133,16 +133,6 @@ def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
         sites_tbd.pop(site)
         del deletion_dict[site]
 
-    # non-BU users on sites - KEEPING THESE USERS
-    # non_BU_sites = list(other_del_dict.keys())
-    # for blog_id in tqdm(non_BU_sites):
-    #     user_list = other_del_dict[blog_id]
-    #     site = user_blogs[blog_id]
-
-    #     user_deletion(site, user_list,id_username)
-       
-    #     del other_del_dict[blog_id]
-
     #non-BU users NOT on sites
     non_BU_ids = list(outside_users.keys())
     for id in tqdm(non_BU_ids):
@@ -153,7 +143,7 @@ def deletion(outside_users,user_blogs,id_username,other_users_tbd) -> None:
             print(f"(Non-Butler){Fore.WHITE}{Back.RED} USER {username} was deleted from the network.{Back.RESET}{Fore.RESET}")
 
 
-def user_deletion(site, user_list,id_username) -> None:
+def user_deletion(site:str, user_list: list[int], id_username: dict[int, str]) -> None:
     del_logger.setLevel(logging.INFO)
 
     # add buwebservices (cfg["buwebservices_id"]) to site
@@ -217,7 +207,7 @@ def user_deletion(site, user_list,id_username) -> None:
         del_logger.info(f"BLOG {site} will not be archived.")
 
 
-def get_stats(inactive, outside, sites, kept_sites, del_sites, id_username) -> None:
+def get_stats(inactive:set[str], outside, sites: list[int], kept_sites: int, del_sites: int, id_username: dict[int, str]) -> None:
     logger.setLevel(logging.INFO)
     
     """output statisitics"""    

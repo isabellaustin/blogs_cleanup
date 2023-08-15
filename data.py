@@ -16,13 +16,14 @@ class d:
                 password = cfg["password"])
 
        
-    def fetch_multisite_users(self,id_username,all_kept_users_unique,user_blogs,cnx) -> None:  
-        """Gets the email for users that are on 15 or more sites and the amount of sites they're on
+    def fetch_multisite_users(self, id_username: dict[int, str], all_kept_users_unique: list[str], cnx) -> None:  
+        """Lists the email for users that are on 15 or more sites and the amount of sites they're on
 
         Args:
-            id_username (dict): dict of id and usernames
-        """  
-
+            id_username (dict[int, str]): dict of user ids and usernames
+            all_kept_users_unique (list[str]): a unique list of all users that are kept on the network
+            cnx (connector): SQL connection
+        """          
         user_site_ids: dict[int, list] = {}
 
         header = ['user_email', 'num_of_sites'] 
@@ -35,10 +36,6 @@ class d:
                 index = list(id_username.values()).index(f"{user}")
                 id = list(id_username.keys())[index]
 
-                # for site in user_blogs.items():
-                #     site_id = site[0]
-                #     site_path = site[1]
-
                 user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
 
                 if len(user_site_ids[id]) >= 15:
@@ -47,6 +44,7 @@ class d:
 
 
     def remove_multisite_admins(self) -> None:
+        """Removes mutlisite users (on 15+ sites) from their sites"""        
         multisite_user = []
         user_indices: dict[str, list] = {}
         
@@ -72,14 +70,14 @@ class d:
                         writer.writerow(data)
 
 
-    def user_sitedata_csv(self,id_username,user_blogs,cnx) -> None:
+    def user_sitedata_csv(self, id_username: dict[int, str], user_blogs: dict[int, str], cnx) -> None:
         """Lists the site_id and slug for each site a user is on
 
         Args:
-            username_list (list): list of just usernames from id_username dict
-            id_list (list): list of just user ids from id_username dict
-            user_blogs (list): list of blogs in the database
-        """    
+            id_username (dict[int, str]): dict of user ids and usernames
+            user_blogs (dict[int, str]): dict of all blogs ids and slugs/paths
+            cnx (connector): SQL connection
+        """        
         key = []
         header = ["user_id", "user_email", "site_id", "slug"] 
         with open('user_sitedata.csv', 'w', encoding='UTF8') as f:
@@ -108,7 +106,15 @@ class d:
                     continue
 
 
-    def userdata_csv(self,id_username,user_dates,yearly_user_reg,cnx) -> None:
+    def userdata_csv(self, id_username: dict[int, str], user_dates: list[str], yearly_user_reg: dict[str, int], cnx) -> None:
+        """Lists user_id, user_email, user_registered(yyyy-mm) for every user
+
+        Args:
+            id_username (dict[int, str]): dict of user ids and usernames
+            user_dates (list[str]): empty list that is to-be appended in this function
+            yearly_user_reg (dict[str, int]): empty dict that is to-be appended in this function
+            cnx (connector): SQL connection
+        """        
         header = ["user_id", "user_email", "user_registered"] 
         with open('userdata.csv', 'w', encoding='UTF8') as f:
             writer = csv.writer(f)
@@ -118,15 +124,12 @@ class d:
             for user in tqdm(id_username.items()):
                 id = user[0]
                 user = user[1]
-                # index = username_list.index(f"{user}")
-                # id = id_list[index] #user_id
 
                 user_reg_date = self.wp.get_user_info(id,cnx)
 
                 if user_reg_date not in user_dates:
                         user_dates.append(user_reg_date) 
                         regs = self.wp.get_user_regs(user_reg_date,cnx)
-                        # print(year, regs)
                         yearly_user_reg[user_reg_date] = regs
 
                 data = [f'{id}', f'{user}', f'{user_reg_date}']
@@ -139,7 +142,15 @@ class d:
         wp.yearly_user_reg_png(yearly_user_reg, new_dates)
 
 
-    def sitestats_csv(self,id_username,outside_users,nomads,cnx) -> None:
+    def sitestats_csv(self, id_username: dict[int, str], outside_users: dict[int, str], nomads: list[int], cnx) -> None:
+        """Lists all users and how many sites they're on
+
+        Args:
+            id_username (dict[int, str]): dict of user ids and usernames
+            outside_users (dict[int, str]): dict of non-Butler users' user ids and emails
+            nomads (list[int]): list of users that aren't on any sites
+            cnx (connector): SQL connection
+        """        
         print("Fetching siteless users...")
         for id in tqdm(list(outside_users.keys())):
             user_site_ids, user_roles, user_sites = self.wp.get_user_sites(id,cnx)
@@ -160,12 +171,21 @@ class d:
                     for row in csv.reader(input_file, delimiter=','):
                         sites_count[row[1]] += 1
 
-                    # if sites_count[user] > 0: #8205
                     data = [f'{user}',f'{sites_count[user]}']
                     writer.writerow(data)
 
 
-    def sitedata_csv(self,id_username, user_blogs,blogs_dates,yearly_reg,cnx) -> None:
+    def sitedata_csv(self, id_username: dict[int, str], user_blogs: dict[int, str], blogs_dates: list[str], yearly_reg: dict[str, int], cnx) -> None:
+        """Lists blog_id, slug, registered, and last_updated for every site
+
+        Args:
+            id_username (dict[int, str]): dict of user ids and usernames
+            user_blogs (dict[int, str]): dict of blog ids and slugs/paths
+            blogs_dates (list[str]): empty list that is to-be appended in this function
+            yearly_reg (dict[str, int]): empty dict that is to-be appended in this function
+            cnx (connector): SQL connection
+        """        
+        
         """Gets blog_id, slug, registered, and last_updated for every site
 
         Args:
@@ -217,9 +237,15 @@ class d:
         wp.quarterly_blog_reg_png(yearly_reg, new_dates)
 
 
-    def plugins_csv(self,cnx) -> None:
+    def plugins_csv(self, cnx) -> None:
+        """Creates a dictionary of the active plugins on each site, 
+           a unqiue list of active plugins, and a count of active plugins
+
+        Args:
+            cnx (connector): SQL connection
+        """        
         plugin_count: Counter[int] = collections.Counter()
-        unique_plugins = []
+        unique_plugins: list[str] = []
         sites = {}
         site_plugins: dict[str, list] = {} 
 
@@ -246,7 +272,16 @@ class d:
         d.pluginstats_csv(self,sites,site_plugins,unique_plugins,plugin_count,cnx)
             
 
-    def pluginstats_csv(self,sites,site_plugins,unique_plugins,plugin_count,cnx) -> None:
+    def pluginstats_csv(self, sites: list[int], site_plugins: dict[str, list], unique_plugins: list[str], plugin_count: Counter[int], cnx) -> None:
+        """Lists all plugins and how many activations they have
+
+        Args:
+            sites (list[int]): a list of blog ids
+            site_plugins (dict[str, list]): a dictionary of the active plugins on each site
+            unique_plugins (list[str]): a unqiue list of active plugins
+            plugin_count (Counter[int]): count of active plugins
+            cnx (connector): SQL connection
+        """        
         all_plugins = open("plugins.txt").read().splitlines()
         active1, active6, active21, active101, active501 = [], [], [], [], []
 
@@ -287,7 +322,15 @@ class d:
         d.plugindata_csv(self,sites,site_plugins,inactive,cnx)
             
 
-    def plugindata_csv(self,sites,site_plugins,inactive,cnx) -> None:       
+    def plugindata_csv(self, sites: list[int], site_plugins: dict[str, list], inactive: list[str], cnx) -> None: 
+        """Lists which and how many plugins each site uses
+
+        Args:
+            sites (list[int]): a list of blog ids
+            site_plugins (dict[str, list]): a dictionary of the active plugins on each site
+            inactive (list[str]): all inactive plugins in the database
+            cnx (connector): SQL connection
+        """              
         header = ["inactive_plugin"]
         with open('inactive_plugins.csv', 'w', encoding='UTF8') as input_file: 
             writer = csv.writer(input_file)
@@ -317,7 +360,12 @@ class d:
                 writer.writerow(dataD)
 
 
-    def themes_csv(self,cnx) -> None:
+    def themes_csv(self, cnx) -> None:
+        """Lists which and how many themes each site uses
+
+        Args:
+            cnx (connector): SQL connection
+        """        
         sites_dict: dict[str, str] = {}
         themes_dict: dict[str, list] = {} 
         theme_count: Counter[int] = collections.Counter()
@@ -349,7 +397,16 @@ class d:
                 writer.writerow(dataD)
 
 
-    def themestats_csv(self,sites_dict, themes_dict, theme_count, unique_themes,cnx) -> None:
+    def themestats_csv(self, sites_dict: dict[str, str], themes_dict: dict[str, list], theme_count: Counter[int], unique_themes: list[str], cnx) -> None:
+        """Lists all themes and how many activations they have
+
+        Args:
+            sites_dict (dict[str, str]): a dict of each sites id and slug/path
+            themes_dict (dict[str, list]): dict of each site and what themes it's actively using
+            theme_count (Counter[int]): count of active themes
+            unique_themes (list[str]): unique list of active themes
+            cnx (connector): SQL connection
+        """        
         headerS = ["theme", "theme_activations"]
         with open('themestats.csv', 'w', encoding='UTF8') as input_file: 
             writer = csv.writer(input_file)
